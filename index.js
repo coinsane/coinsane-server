@@ -149,8 +149,59 @@ function apiLimits(req, res, next) {
 admin.initializeApp(config.firebase);
 const db = admin.database();
 
+setInterval(() => updateTotals(), 30 * 1000);
 setInterval(() => fetchPrices(), 30 * 1000);
 setInterval(() => fetchCoins(), 24 * 60 * 60 * 1000);
+
+function updateTotals() {
+  const timestamp = parseInt(Date.now() / 1000) * 1000;
+  const coinsRef = db.ref('coins');
+  coinsRef.once('value', function(snapshot) {
+    const coins = snapshot.val();
+    if (coins && Object.keys(coins).length) {
+      const coinPromises = [];
+      Object.keys(coins).forEach(coinId => {
+        coinPromises.push(new Promise((resolve, reject) => {
+          const amount = coins[coinId].amount;
+          const marketId = coins[coinId].marketId;
+          const portfolioId = coins[coinId].portfolioId;
+
+          const marketRef = db.ref(`market/${marketId}`);
+          marketRef.once('value', function(snapshot) {
+            const market = snapshot.val();
+            if (market && market.prices && market.prices.BTC && market.prices.BTC.price) {
+              const price = market.prices.BTC.price;
+              const total = amount * price;
+              resolve({ portfolioId, total });
+            }
+          });
+        }));
+      });
+      Promise
+        .all(coinPromises)
+        .then(coinTotals => {
+          if (coinTotals.length) {
+            const portfolios = {};
+            coinTotals.forEach(coin => {
+              if (!portfolios[coin.portfolioId]) {
+                portfolios[coin.portfolioId] = coin.total;
+              } else {
+                portfolios[coin.portfolioId] += coin.total;
+              }
+            });
+            return portfolios;
+          }
+        })
+        .then(portfolios => {
+          const portfoliosRef = db.ref(`portfolios`);
+          Object.keys(portfolios).forEach(portfolioId => {
+            const totals = portfoliosRef.child(`${portfolioId}/totals`).push();
+            totals.set({ timestamp, value: portfolios[portfolioId] });
+          });
+        });
+    }
+  });
+}
 
 function fetchPrices() {
   const marketRef = db.ref('market');
