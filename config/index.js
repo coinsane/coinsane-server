@@ -10,7 +10,11 @@ const config = {
   },
   port: process.env.PORT || 8080,
   mongo: {
-    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/coinsane'
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/coinsane',
+    options: {
+      keepAlive: 300000,
+      connectTimeoutMS: 30000
+    }
   },
   firebase: {
     credential: admin.credential.cert(serviceAccount),
