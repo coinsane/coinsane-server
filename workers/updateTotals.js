@@ -178,25 +178,37 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
             Object.keys(totals).map(i => total[i] = totals[i]);
             return total.save()
           }
-          // console.log('assign', Object.assign(totals, { portfolioId }))
           const newTotal = new totalModel(Object.assign(totals, { portfolioId }));
           newTotal.save();
         });
 
-      //
       const totalsObj = {};
       totals.mins.forEach(item => {
         if (!totalsObj.mins) totalsObj.mins = {};
         totalsObj.mins[item.time] = item.value;
       });
-      if (totals.hours) totals.hours.forEach(item => {
-        if (!totalsObj.hours) totalsObj.hours = {};
-        totalsObj.hours[item.time] = item.value;
-      });
-      if (totals.days) totals.days.forEach(item => {
-        if (!totalsObj.days) totalsObj.days = {};
-        totalsObj.days[item.time] = item.value;
-      });
+
+      if (totals.hours && totals.hours.length) {
+        totalsObj.hours = {};
+        totals.hours.forEach(item => {
+          totalsObj.hours[item.time] = {
+            min: item.value['min'],
+            max: item.value['max'],
+            avg: item.value['avg']
+          };
+        });
+      }
+
+      if (totals.days && totals.days.length) {
+        totalsObj.days = {};
+        totals.days.forEach(item => {
+          totalsObj.days[item.time] = {
+            min: item.value['min'],
+            max: item.value['max'],
+            avg: item.value['avg']
+          };
+        });
+      }
 
       const portfolioTotalsRef = portfoliosRef.child(`${portfolioId}/totals`);
       portfolioTotalsRef.set(totalsObj).catch(console.log);
