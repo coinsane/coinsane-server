@@ -31,7 +31,7 @@ function fetchCoins() {
           marketModel.findOne({ id: item.id })
             .then(market => {
               if (market) {
-                Object.keys(market).map(i => market[i] = item[i]);
+                Object.keys(item).map(i => market[i] = item[i]);
                 return market.save();
               }
               const newMarket = new marketModel(item);
