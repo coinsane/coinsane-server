@@ -10,13 +10,14 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node" : "v9.4.0"
+    "node": "v9.4.0"
   },
   "dependencies": {
     "bottleneck": "^2.0.1",
     "firebase": "^4.9.1",
     "firebase-admin": "^5.8.2",
     "memory-cache": "^0.2.0",
+    "mongodb": "^3.0.2",
     "mongoose": "^5.0.6",
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
