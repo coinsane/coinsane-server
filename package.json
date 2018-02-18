@@ -18,7 +18,7 @@
     "firebase-admin": "^5.8.2",
     "memory-cache": "^0.2.0",
     "mongodb": "3.0.2",
-    "mongoose": "5.0.5",
+    "mongoose": "5.0.0",
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
     "restify": "^6.3.4"
