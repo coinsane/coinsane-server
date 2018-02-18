@@ -97,7 +97,6 @@ function apiTotals(req, res, next) {
     })
     .then(totals => {
       if (totals) {
-        console.log(data.length)
         res.send({
           success: true,
           data: {
@@ -116,7 +115,6 @@ function aggregate(data, period, aggr) {
   data.forEach((item, index) => {
     if (index % aggr === 0) aggregated.push(item);
   });
-  console.log(aggregated)
   return aggregated.slice(0, period / aggr);
 }
 
