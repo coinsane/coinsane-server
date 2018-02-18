@@ -1,3 +1,4 @@
+const config = require('../config');
 const { firebase, mongo } = require('../lib/db');
 const rp = require('request-promise-native');
 
@@ -86,10 +87,12 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
   let hours = [];
   let days = [];
 
-  const MINUTES_DAY = 1440;
-  const MINUTES_HOUR = 60;
-  const HOURS_DAY = 24;
-  const HOURS_MONTH = 720;
+  const {
+    MINUTES_DAY,
+    MINUTES_HOUR,
+    HOURS_DAY,
+    HOURS_MONTH
+  } = config.constants;
 
   return getPortfolioTotals(portfolioId)
     .then(portfolioTotals => {
@@ -180,6 +183,7 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
           newTotal.save();
         });
 
+      //
       const totalsObj = {};
       totals.mins.forEach(item => {
         if (!totalsObj.mins) totalsObj.mins = {};

@@ -18,6 +18,15 @@ const config = {
     databaseAuthVariableOverride: {
       uid: 'coinsane-worker'
     }
+  },
+  constants: {
+    MINUTES_DAY: 1440,
+    MINUTES_HOUR: 60,
+    HOURS_DAY: 24,
+    HOURS_WEEK: 168,
+    HOURS_MONTH: 720,
+    DAYS_MONTH: 30,
+    DAYS_YEAR: 30,
   }
 };
 
