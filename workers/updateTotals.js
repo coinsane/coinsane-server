@@ -199,7 +199,7 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
       });
 
       const portfolioTotalsRef = portfoliosRef.child(`${portfolioId}/totals`);
-      portfolioTotalsRef.set(totalsObj);
+      portfolioTotalsRef.set(totalsObj).catch(console.log);
     });
 }
 

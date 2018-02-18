@@ -26,7 +26,7 @@ function fetchCoins() {
       items.forEach(item => {
         if (item.symbol.indexOf('*') === -1) {
           const marketIdRef = marketRef.child(item.id);
-          marketIdRef.set(item);
+          marketIdRef.set(item).catch(console.log);
 
           marketModel.findOne({ id: item.id })
             .then(market => {

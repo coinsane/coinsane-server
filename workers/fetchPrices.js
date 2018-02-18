@@ -93,7 +93,7 @@ function fetchPrices() {
         .then(prices => {
           Object.keys(prices).forEach(id => {
             const marketIdPricesRef = marketRef.child(`${id}/prices`);
-            marketIdPricesRef.set(prices[id]);
+            marketIdPricesRef.set(prices[id]).catch(console.log);
 
             marketModel.findOne({ id })
               .then(market => {
