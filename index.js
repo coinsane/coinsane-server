@@ -4,7 +4,13 @@ const mongoose = require('mongoose');
 const { startServer } = require('./server');
 const { startWorkers } = require('./workers');
 
-mongoose.connect(config.mongo.uri, config.mongo.options);
+mongoose.connect(config.mongo.uri, config.mongo.options, (err, res) => {
+  if (err) {
+    console.log ('ERROR connecting to: ' + uristring + '. ' + err);
+  } else {
+    console.log ('Succeeded connected to: ' + uristring);
+  }
+});
 mongoose.Promise = Promise;
 
 const conn = mongoose.connection;
