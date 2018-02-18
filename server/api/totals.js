@@ -12,7 +12,7 @@ const {
   HOURS_MONTH
 } = config.constants;
 
-function apiPortfolio(req, res, next) {
+function apiTotals(req, res, next) {
   const { portfolioId, range } = req.query;
 
   if (!portfolioId) {
@@ -95,12 +95,15 @@ function apiPortfolio(req, res, next) {
 
       // cache it
     })
-    .then(data => {
-      if (data) {
+    .then(totals => {
+      if (totals) {
         console.log(data.length)
         res.send({
           success: true,
-          data
+          data: {
+            portfolioId,
+            totals
+          }
         });
         return next();
       }
@@ -117,4 +120,4 @@ function aggregate(data, period, aggr) {
   return aggregated.slice(0, period / aggr);
 }
 
-module.exports = apiPortfolio;
+module.exports = apiTotals;
