@@ -8,6 +8,9 @@
   },
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node" : "v9.4.0"
+  },
   "dependencies": {
     "bottleneck": "^2.0.1",
     "firebase": "^4.9.1",
