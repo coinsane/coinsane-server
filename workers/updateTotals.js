@@ -142,9 +142,6 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
               value: getMinMaxAvgHours(minsBlock)
             };
             hours.push(hour);
-            if (hours.length > HOURS_MONTH) {
-              hours.splice(0, 1);
-            }
 
             if (hours.length > HOURS_DAY - 1) {
               const hourBlocks = parseInt(hours.length / HOURS_DAY);
@@ -159,6 +156,10 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
                   days.push(day);
                 }
               }
+            }
+
+            if (hours.length > HOURS_MONTH) {
+              hours.splice(0, 1);
             }
 
           }
