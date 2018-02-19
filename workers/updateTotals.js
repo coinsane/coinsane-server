@@ -103,38 +103,37 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
 
       if (!portfolioTotals) {
         totals.mins = [total];
-        // totals.mins[time] = lastTotal;
+        totals.minsCount = 1;
         return totals;
       }
 
-      // const minsArray = totalObjToArray(portfolioTotals.mins);
-      // const hoursArray = totalObjToArray(portfolioTotals.hours);
-      // const daysArray = totalObjToArray(portfolioTotals.days);
-      const minsArray = portfolioTotals.mins;
-      const hoursArray = portfolioTotals.hours;
-      const daysArray = portfolioTotals.days;
-
-      if (minsArray.length > MINUTES_DAY - 1) {
-        minsArray.splice(0, 1);
+      if (portfolioTotals.mins.length > MINUTES_DAY - 1) {
+        portfolioTotals.mins.splice(0, 1);
       }
 
-      if (hoursArray.length) {
-        hours = hoursArray.concat([]);
+      if (portfolioTotals.hours.length) {
+        hours = portfolioTotals.hours.concat([]);
+        totals.hoursCount = portfolioTotals.hoursCount;
       }
 
-      if (daysArray.length) {
-        days = daysArray.concat([]);
+      if (portfolioTotals.days.length) {
+        days = portfolioTotals.days.concat([]);
+        totals.daysCount = portfolioTotals.daysCount;
       }
 
-      mins = minsArray.concat([], total);
+      mins = portfolioTotals.mins.concat([], total);
       totals.mins = mins;
-      // totals.mins = totalArrayToObj(mins);
+      totals.minsCount = portfolioTotals.minsCount + 1;
 
-      if (mins.length > MINUTES_HOUR - 1) {
-        const minBlocks = parseInt(mins.length / MINUTES_HOUR);
+      if (totals.minsCount > MINUTES_HOUR - 1) {
+        const hoursCount = parseInt(totals.minsCount / MINUTES_HOUR);
 
-        if (minBlocks && mins.length % MINUTES_HOUR === 0) {
-          const minsBlock = mins.slice((minBlocks-1) * MINUTES_HOUR, minBlocks * MINUTES_HOUR);
+        if (totals.hoursCount > hoursCount) {
+          hoursCount = totals.hoursCount;
+        }
+
+        if (hoursCount && totals.minsCount % MINUTES_HOUR === 0) {
+          const minsBlock = mins.slice((hoursCount-1) * MINUTES_HOUR, hoursCount * MINUTES_HOUR);
 
           if (minsBlock.length === MINUTES_HOUR) {
             const hour = {
@@ -142,18 +141,26 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
               value: getMinMaxAvgHours(minsBlock)
             };
             hours.push(hour);
+            totals.hours = hours;
+            totals.hoursCount++;
 
-            if (hours.length > HOURS_DAY - 1) {
-              const hourBlocks = parseInt(hours.length / HOURS_DAY);
+            if (totals.hoursCount > HOURS_DAY - 1) {
+              const daysCount = parseInt(totals.hoursCount / HOURS_DAY);
 
-              if (hourBlocks && hours.length % HOURS_DAY === 0) {
-                const hoursBlock = hours.slice((hourBlocks-1) * HOURS_DAY, hourBlocks * HOURS_DAY);
-                if (hoursBlock.length === HOURS_DAY) {
+              if (totals.daysCount > daysCount) {
+                daysCount = totals.daysCount;
+              }
+
+              if (daysCount && totals.hoursCount % HOURS_DAY === 0) {
+                const daysBlock = hours.slice((daysCount-1) * HOURS_DAY, daysCount * HOURS_DAY);
+                if (daysBlock.length === HOURS_DAY) {
                   const day = {
                     time,
-                    value: getMinMaxAvgDays(hoursBlock)
+                    value: getMinMaxAvgDays(daysBlock)
                   };
                   days.push(day);
+                  totals.days = days;
+                  totals.daysCount++;
                 }
               }
             }
@@ -164,10 +171,6 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
 
           }
         }
-        if (hours.length) totals.hours = hours;
-        if (days.length) totals.days = days;
-        // totals.hours = totalArrayToObj(hours);
-        // totals.days = totalArrayToObj(days);
       }
 
       return totals;
