@@ -3,7 +3,7 @@ const serviceAccount = require('./coinsane-org-firebase-adminsdk-ujxdk-56b3654d4
 
 const config = {
   apiUri: 'https://min-api.cryptocompare.com/',
-  apiUriOld: 'https://www.cryptocompare.com/api/',
+  apiUri2: 'https://www.cryptocompare.com/api/',
   limiter: {
     maxConcurrent: 1,
     minTime: 1000

@@ -110,6 +110,9 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
       if (portfolioTotals.mins.length > MINUTES_DAY - 1) {
         portfolioTotals.mins.splice(0, 1);
       }
+      mins = portfolioTotals.mins.concat([], total);
+      totals.minsCount = portfolioTotals.minsCount + 1;
+      totals.mins = mins;
 
       if (portfolioTotals.hours.length) {
         hours = portfolioTotals.hours.concat([]);
@@ -121,55 +124,54 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
         totals.daysCount = portfolioTotals.daysCount;
       }
 
-      mins = portfolioTotals.mins.concat([], total);
-      totals.mins = mins;
-      totals.minsCount = portfolioTotals.minsCount + 1;
+
+      if (!totals.hoursCount) totals.hoursCount = 0;
+      if (!totals.daysCount) totals.daysCount = 0;
 
       if (totals.minsCount > MINUTES_HOUR - 1) {
-        const hoursCount = parseInt(totals.minsCount / MINUTES_HOUR);
+        let hoursCountFromMins = parseInt(totals.minsCount / MINUTES_HOUR);
 
-        if (totals.hoursCount > hoursCount) {
-          hoursCount = totals.hoursCount;
-        }
-
-        if (hoursCount && totals.minsCount % MINUTES_HOUR === 0) {
-          const minsBlock = mins.slice((hoursCount-1) * MINUTES_HOUR, hoursCount * MINUTES_HOUR);
-
-          if (minsBlock.length === MINUTES_HOUR) {
-            const hour = {
-              time,
-              value: getMinMaxAvgHours(minsBlock)
-            };
-            hours.push(hour);
-            totals.hours = hours;
-            totals.hoursCount++;
-
-            if (totals.hoursCount > HOURS_DAY - 1) {
-              const daysCount = parseInt(totals.hoursCount / HOURS_DAY);
-
-              if (totals.daysCount > daysCount) {
-                daysCount = totals.daysCount;
-              }
-
-              if (daysCount && totals.hoursCount % HOURS_DAY === 0) {
-                const daysBlock = hours.slice((daysCount-1) * HOURS_DAY, daysCount * HOURS_DAY);
-                if (daysBlock.length === HOURS_DAY) {
-                  const day = {
-                    time,
-                    value: getMinMaxAvgDays(daysBlock)
-                  };
-                  days.push(day);
-                  totals.days = days;
-                  totals.daysCount++;
-                }
-              }
-            }
-
-            if (hours.length > HOURS_MONTH) {
-              hours.splice(0, 1);
-            }
-
+        if (hoursCountFromMins && totals.minsCount % MINUTES_HOUR === 0) {
+          if (hoursCountFromMins > HOURS_DAY) {
+            hoursCountFromMins = HOURS_DAY;
           }
+          const minsBlock = mins.slice((hoursCountFromMins-1) * MINUTES_HOUR, hoursCountFromMins * MINUTES_HOUR);
+
+          const hour = {
+            time,
+            value: getMinMaxAvgHours(minsBlock)
+          };
+          hours.push(hour);
+          totals.hours = hours;
+          totals.hoursCount++;
+
+          if (totals.hoursCount > HOURS_DAY - 1) {
+            let daysCountFromHours = parseInt(totals.hoursCount / HOURS_DAY);
+
+            if (totals.daysCount > daysCountFromHours) {
+              daysCountFromHours = totals.daysCount;
+            }
+
+            if (daysCountFromHours && totals.hoursCount % HOURS_DAY === 0) {
+              if (daysCountFromHours > HOURS_MONTH) {
+                daysCountFromHours = HOURS_MONTH;
+              }
+              const daysBlock = hours.slice((daysCountFromHours-1) * HOURS_DAY, daysCountFromHours * HOURS_DAY);
+
+              const day = {
+                time,
+                value: getMinMaxAvgDays(daysBlock)
+              };
+              days.push(day);
+              totals.days = days;
+              totals.daysCount++;
+            }
+          }
+
+          if (hours.length > HOURS_MONTH) {
+            hours.splice(0, 1);
+          }
+
         }
       }
 
@@ -184,7 +186,7 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
           }
           const newTotal = new totalModel(Object.assign(totals, { portfolioId }));
           newTotal.save();
-        });
+        }).catch(console.log);
 
       const totalsObj = {};
       totals.mins.forEach(item => {

@@ -1,3 +1,6 @@
+const mongooseConnect = require('../mongooseConnect');
+mongooseConnect(fetchCoins);
+
 const config = require('../config');
 const { firebase, mongo } = require('../lib/db');
 const rp = require('request-promise-native');
@@ -6,7 +9,7 @@ const { marketRef } = firebase();
 const { marketModel } = mongo();
 
 function fetchCoins() {
-  const uri = `${config.apiUriOld}data/coinlist`;
+  const uri = `${config.apiUri2}data/coinlist`;
   rp({ uri, json: true })
     .then(data => {
       const items = Object.keys(data.Data).map(key => {
@@ -39,7 +42,6 @@ function fetchCoins() {
             });
         }
       });
+      console.log('fetchCoins done')
     });
 }
-
-module.exports = fetchCoins;
