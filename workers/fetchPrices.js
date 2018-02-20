@@ -13,7 +13,8 @@ const { marketRef } = firebase();
 const { marketModel } = mongo();
 
 function fetchPrices() {
-  marketModel.find({})
+  const startTime = new Date();
+  return marketModel.find({})
     .then(markets => {
       const priceRequestPromises = [];
 
@@ -89,7 +90,7 @@ function fetchPrices() {
         }
       });
 
-      Promise.all(priceRequestPromises)
+      return Promise.all(priceRequestPromises)
         .then(results => {
           let resultsAll = {};
           results.forEach((item, index) => {
@@ -98,9 +99,7 @@ function fetchPrices() {
           return resultsAll;
         })
         .then(prices => {
-          let count = 0
           Object.keys(prices).forEach(id => {
-            count++
             const marketIdPricesRef = marketRef.child(`${id}/prices`);
             marketIdPricesRef.set(prices[id]).catch(console.log);
 
@@ -112,7 +111,11 @@ function fetchPrices() {
                 }
               });
           });
-          console.log('done fetchPrices', count);
+          return;
+        })
+        .then(() => {
+          console.log('fetchPrices', new Date(new Date() - startTime).getTime()/1000, 'sec' );
+          return;
         })
         .catch(console.log);
     });

@@ -8,16 +8,22 @@ const { marketModel, totalModel } = mongo();
 module.exports = updatePortfoliosTotals;
 
 function updatePortfoliosTotals() {
+  const startTime = new Date();
   return Promise.resolve()
     .then(getAllCoins)
     .then(getAllCoinsTotals)
     .then(getAllPortfoliosTotals)
     .then(portfoliosLastTotals => {
       const portfolioIds = Object.keys(portfoliosLastTotals);
-      portfolioIds.forEach(portfolioId => {
+      const updatePromises = portfolioIds.map(portfolioId => {
         const lastTotal = portfoliosLastTotals[portfolioId];
-        updatePortfolioTotals(portfolioId, lastTotal);
+        return updatePortfolioTotals(portfolioId, lastTotal);
       });
+      return Promise.all(updatePromises);
+    })
+    .then(() => {
+      console.log('updateTotals', new Date(new Date() - startTime).getTime()/1000, 'sec' );
+      return;
     });
 }
 
@@ -98,7 +104,7 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
     .then(portfolioTotals => {
       const total = {
         time,
-        value: lastTotal
+        value: lastTotal || 0
       };
 
       if (!portfolioTotals) {
@@ -181,7 +187,7 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
       totalModel.findOne({ portfolioId })
         .then(total => {
           if (total) {
-            Object.keys(totals).map(i => total[i] = totals[i]);
+            Object.keys(totals).forEach(i => total[i] = totals[i]);
             return total.save()
           }
           const newTotal = new totalModel(Object.assign(totals, { portfolioId }));
@@ -191,16 +197,16 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
       const totalsObj = {};
       totals.mins.forEach(item => {
         if (!totalsObj.mins) totalsObj.mins = {};
-        totalsObj.mins[item.time] = item.value;
+        totalsObj.mins[item.time] = item.value || 0;
       });
 
       if (totals.hours && totals.hours.length) {
         totalsObj.hours = {};
         totals.hours.forEach(item => {
           totalsObj.hours[item.time] = {
-            min: item.value['min'],
-            max: item.value['max'],
-            avg: item.value['avg']
+            min: item.value['min'] || 0,
+            max: item.value['max'] || 0,
+            avg: item.value['avg'] || 0
           };
         });
       }
@@ -209,15 +215,16 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
         totalsObj.days = {};
         totals.days.forEach(item => {
           totalsObj.days[item.time] = {
-            min: item.value['min'],
-            max: item.value['max'],
-            avg: item.value['avg']
+            min: item.value['min'] || 0,
+            max: item.value['max'] || 0,
+            avg: item.value['avg'] || 0
           };
         });
       }
 
       const portfolioTotalsRef = portfoliosRef.child(`${portfolioId}/totals`);
       portfolioTotalsRef.set(totalsObj).catch(console.log);
+      return;
     });
 }
 
@@ -233,9 +240,9 @@ function getPortfolioTotals(portfolioId) {
 }
 
 function getMinMaxAvgHours(arr) {
-  let max = arr[0].value;
-  let min = arr[0].value;
-  let sum = arr[0].value;
+  let max = arr[0].value || 0;
+  let min = arr[0].value || 0;
+  let sum = arr[0].value || 0;
   for (let i = 1; i < arr.length; i++) {
     if (arr[i].value > max) max = arr[i].value;
     if (arr[i].value < min) min = arr[i].value;
@@ -245,9 +252,9 @@ function getMinMaxAvgHours(arr) {
 }
 
 function getMinMaxAvgDays(arr) {
-  let max = arr[0].value.avg;
-  let min = arr[0].value.avg;
-  let sum = arr[0].value.avg;
+  let max = arr[0].value.avg || 0;
+  let min = arr[0].value.avg || 0;
+  let sum = arr[0].value.avg || 0;
   for (let i = 1; i < arr.length; i++) {
     if (arr[i].value.avg > max) max = arr[i].value.avg;
     if (arr[i].value.avg < min) min = arr[i].value.avg;
@@ -262,7 +269,7 @@ function totalObjToArray(obj) {
   return Object.keys(obj).map(key => {
     return {
       time: key,
-      value: obj[key]
+      value: obj[key] || 0
     }
   });
 }
@@ -271,7 +278,7 @@ function totalArrayToObj(arr) {
   if (!arr || !arr.length) return {};
   const obj = {};
   arr.forEach(item => {
-    obj[item.time] = item.value;
+    obj[item.time] = item.value || 0;
   });
   return obj;
 }

@@ -1,6 +1,3 @@
-const mongooseConnect = require('../mongooseConnect');
-mongooseConnect(fetchCoins);
-
 const config = require('../config');
 const { firebase, mongo } = require('../lib/db');
 const rp = require('request-promise-native');
@@ -42,6 +39,8 @@ function fetchCoins() {
             });
         }
       });
-      console.log('fetchCoins done')
+      // console.log('fetchCoins done')
     });
 }
+
+module.exports = fetchCoins;

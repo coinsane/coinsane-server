@@ -3,14 +3,25 @@ mongooseConnect(startWorkers);
 
 const updateTotals = require('./updateTotals');
 const fetchPrices = require('./fetchPrices');
+const fetchCoins = require('./fetchCoins');
+
+const cron = require('cron');
 
 function startWorkers() {
-  setTimeout(() => {
-    updateTotals();
-    setInterval(() => updateTotals(), 60 * 1000);
-  }, 0);
-  setTimeout(() => {
-    fetchPrices();
-    setInterval(() => fetchPrices(), 60 * 1000)
-  }, 30 * 1000);
+  new cron.CronJob({
+    cronTime: '0 */1 * * * *',
+    onTick: () => {
+      Promise.resolve()
+        .then(fetchPrices)
+        .then(updateTotals)
+    },
+    start: true,
+    timeZone: 'Europe/Moscow'
+  });
+  new cron.CronJob({
+    cronTime: '0 0 0 * * *',
+    onTick: () => fetchCoins(),
+    start: true,
+    timeZone: 'Europe/Moscow'
+  });
 }
