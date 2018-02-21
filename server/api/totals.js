@@ -14,6 +14,7 @@ const {
 
 function apiTotals(req, res, next) {
   const { portfolioId, range } = req.query;
+  const { userId } = req.authorization;
 
   if (!portfolioId) {
     res.send({
@@ -22,90 +23,127 @@ function apiTotals(req, res, next) {
     });
     return next();
   }
-  if (!range) {
-    range = '1d';
-  }
 
-  totalModel.findOne({ portfolioId })
-    .then(totals => {
-      let data;
-      if (!totals) {
-        data = [];
-        return data;
-      }
+  const getTotals = () => {
+    const query = { owner: userId };
+    if (portfolioId === 'all') {
+      return totalModel.find(query).then(totals => totals.map(parseTotals));
+    }
+    query.portfolioId = portfolioId;
+    return totalModel.findOne(query).then(parseTotals);
+  };
 
-      switch (range) {
-        case '1h':
-          data = totals.mins.slice(0, MINUTES_HOUR);
-          break;
-        case '1d':
-          data = aggregate(totals.mins, MINUTES_DAY, 10);
-          break;
-        case '1w':
-          if (!totals.hours) {
-            return data = aggregate(totals.mins, MINUTES_DAY, 10);
-          }
-          data = totals.hours.slice(0, HOURS_WEEK);
-          break;
-        case '1m':
+  const parseTotals = totals => {
+    let data;
+    if (!totals) {
+      data = [];
+      return data;
+    }
+
+    switch (range) {
+      case '1h':
+        data = totals.mins.slice(0, MINUTES_HOUR);
+        break;
+      case '1d':
+        data = aggregate(totals.mins, MINUTES_DAY, 10);
+        break;
+      case '1w':
+        if (!totals.hours) {
+          return data = aggregate(totals.mins, MINUTES_DAY, 10);
+        }
+        data = totals.hours.slice(0, HOURS_WEEK);
+        break;
+      case '1m':
+        if (!totals.hours) {
+          return data = aggregate(totals.mins, MINUTES_DAY, 10);
+        }
+        data = aggregate(totals.hours, HOURS_MONTH, 6);
+        break;
+      case '3m':
+        if (!totals.days) {
           if (!totals.hours) {
             return data = aggregate(totals.mins, MINUTES_DAY, 10);
           }
           data = aggregate(totals.hours, HOURS_MONTH, 6);
-          break;
-        case '3m':
-          if (!totals.days) {
-            if (!totals.hours) {
-              return data = aggregate(totals.mins, MINUTES_DAY, 10);
-            }
-            data = aggregate(totals.hours, HOURS_MONTH, 6);
+        }
+        data = totals.days.slice(0, DAYS_MONTH * 3);
+        break;
+      case '6m':
+        if (!totals.days) {
+          if (!totals.hours) {
+            return data = aggregate(totals.mins, MINUTES_DAY, 10);
           }
-          data = totals.days.slice(0, DAYS_MONTH * 3);
-          break;
-        case '6m':
-          if (!totals.days) {
-            if (!totals.hours) {
-              return data = aggregate(totals.mins, MINUTES_DAY, 10);
-            }
-            data = aggregate(totals.hours, HOURS_MONTH, 6);
+          data = aggregate(totals.hours, HOURS_MONTH, 6);
+        }
+        data = totals.days.slice(0, DAYS_MONTH * 6);
+        break;
+      case '1y':
+        if (!totals.days) {
+          if (!totals.hours) {
+            return data = aggregate(totals.mins, MINUTES_DAY, 10);
           }
-          data = totals.days.slice(0, DAYS_MONTH * 6);
-          break;
-        case '1y':
-          if (!totals.days) {
-            if (!totals.hours) {
-              return data = aggregate(totals.mins, MINUTES_DAY, 10);
-            }
-            data = aggregate(totals.hours, HOURS_MONTH, 6);
+          data = aggregate(totals.hours, HOURS_MONTH, 6);
+        }
+        data = totals.days.slice(0, DAYS_YEAR);
+        break;
+      default: // longest
+        if (!totals.days) {
+          if (!totals.hours) {
+            return data = aggregate(totals.mins, MINUTES_DAY, 10);
           }
-          data = totals.days.slice(0, DAYS_YEAR);
-          break;
-        default: // longest
-          if (!totals.days) {
-            if (!totals.hours) {
-              return data = aggregate(totals.mins, MINUTES_DAY, 10);
-            }
-            data = aggregate(totals.hours, HOURS_MONTH, 6);
-          }
-          data = totals.days;
-          break;
-      }
+          data = aggregate(totals.hours, HOURS_MONTH, 6);
+        }
+        data = totals.days;
+        break;
+    }
 
-      return data;
+    return data;
 
-      // cache it
+    // cache it
+  }
+
+  getTotals()
+    .then(totals => {
+      sumTotals = {};
+      totals.forEach(total => {
+
+        if (Array.isArray(total)) {
+          total.forEach(tick => {
+            if (!sumTotals[tick.time]) {
+              sumTotals[tick.time] = tick.value;
+            } else if (typeof tick.value === 'number') {
+              sumTotals[tick.time] += tick.value;
+            } else {
+              Object.keys(tick.value).forEach(key => {
+                sumTotals[tick.time][key] += tick.value[key];
+              });
+            }
+          });
+        } else {
+          if (!sumTotals[total.time]) {
+            return sumTotals[total.time] = total.value;
+          } else if (typeof total.value === 'number') {
+            sumTotals[total.time] += total.value;
+          } else {
+            Object.keys(total.value).forEach(key => {
+              sumTotals[total.time][key] += tick.value[key];
+            });
+          }
+        }
+
+      });
+
+      return sumTotals;
     })
     .then(totals => {
-      if (totals) {
-        res.send({
-          success: true,
-          data: {
-            portfolioId,
-            totals
-          }
-        });
-        return next();
-      }
+      res.send({
+        success: true,
+        data: {
+          portfolioId,
+          totals
+        }
+      });
+      return next();
     });
 
 }

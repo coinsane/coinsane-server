@@ -1,3 +1,5 @@
+const config = require('../config');
+
 const mongooseConnect = require('../mongooseConnect');
 mongooseConnect(startWorkers);
 

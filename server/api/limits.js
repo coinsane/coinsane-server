@@ -3,7 +3,7 @@ const rp = require('request-promise-native');
 
 function apiLimits(req, res, next) {
   const limitsPromises = ['second', 'hour'].map(period => {
-    const uri = `${config.apiUri}stats/rate/${period}/limit`;
+    const uri = `${config.cryptocompare.apiMinUri}/stats/rate/${period}/limit`;
     return rp({ uri, json: true });
   });
 

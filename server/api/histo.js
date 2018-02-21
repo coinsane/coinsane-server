@@ -1,11 +1,14 @@
 const config = require('../../config');
 
 const rp = require('request-promise-native');
-const cache = require('memory-cache');
 const Bottleneck = require('bottleneck');
-const limiter = new Bottleneck(config.limiter);
+const limiter = new Bottleneck(config.cryptocompare.limiter.histo);
 const fetchLimit = limiter.wrap(rp);
-const apiCache = new cache.Cache();
+
+const redis = require('redis');
+const apiCache = redis.createClient(config.redis);
+const { promisify } = require('util');
+const apiCacheGet = promisify(apiCache.get).bind(apiCache);
 
 function apiHisto(req, res, next) {
   const { fsym, tsym, e = 'CCCAGG', range } = req.query;
@@ -15,15 +18,6 @@ function apiHisto(req, res, next) {
       success: false,
       data: 'These query params are required: fsym, tsym, range'
     });
-    return next();
-  }
-
-  const cacheKey = `histo:${JSON.stringify(req.query)}`;
-  const cacheValue = apiCache.get(cacheKey);
-
-  if (cacheValue) {
-    console.log('from cache', cacheKey);
-    res.send(JSON.parse(cacheValue));
     return next();
   }
 
@@ -69,7 +63,7 @@ function apiHisto(req, res, next) {
       break;
   }
 
-  let uri = `${config.apiUri}data/${period}`;
+  let uri = `${config.cryptocompare.apiMinUri}/data/${period}`;
   let qs = {
     fsym,
     tsym,
@@ -78,21 +72,42 @@ function apiHisto(req, res, next) {
     e,
   }
 
-  fetchLimit({ uri, qs, json: true })
-    .then(data => {
-      const response = {
-        success: data.Response === 'Success',
-        data: data.Data
-      };
-      if (response.success) {
-        console.log('from response', cacheKey);
-        if (period == 'histoday') apiCache.put(cacheKey, JSON.stringify(data.Data), 12 * 60 * 60 * 1000); // once in 12h
-        if (period == 'histohour') apiCache.put(cacheKey, JSON.stringify(data.Data), 30 * 60 * 1000); // once in 30m
-        if (period == 'histominute') apiCache.put(cacheKey, JSON.stringify(data.Data), 30 * 1000); // once in 30s
-      }
-      res.send(response);
-      next();
+  const cacheKey = `histo:${JSON.stringify(req.query)}`;
+
+  return new Promise((resolve, reject) => {
+    apiCacheGet(cacheKey)
+      .then(cacheValue => {
+        if (cacheValue) {
+          try {
+            console.log('from cache', cacheKey);
+            const response = JSON.parse(cacheValue);
+            return resolve(response);
+          } catch (e) {}
+        }
+        return fetchLimit({ uri, qs, json: true })
+          .then(data => {
+            const response = {
+              success: data.Response === 'Success',
+              data: data.Data
+            };
+            if (response.success) {
+              console.log('from response', cacheKey);
+              if (period == 'histoday') apiCache.set(cacheKey, JSON.stringify(data.Data), 'EX', 12 * 60 * 60 * 1000); // once in 12h
+              if (period == 'histohour') apiCache.set(cacheKey, JSON.stringify(data.Data), 'EX', 30 * 60 * 1000); // once in 30m
+              if (period == 'histominute') apiCache.set(cacheKey, JSON.stringify(data.Data), 'EX', 30 * 1000); // once in 30s
+            }
+            resolve(response);
+          });
+      })
+  })
+  .then(data => {
+    res.send({
+      success: true,
+      data
     });
+    next();
+  });
+
 }
 
 module.exports = apiHisto;

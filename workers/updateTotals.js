@@ -16,8 +16,9 @@ function updatePortfoliosTotals() {
     .then(portfoliosLastTotals => {
       const portfolioIds = Object.keys(portfoliosLastTotals);
       const updatePromises = portfolioIds.map(portfolioId => {
-        const lastTotal = portfoliosLastTotals[portfolioId];
-        return updatePortfolioTotals(portfolioId, lastTotal);
+        const lastTotal = portfoliosLastTotals[portfolioId].lastTotal;
+        const owner = portfoliosLastTotals[portfolioId].owner;
+        return updatePortfolioTotals({ portfolioId, lastTotal, owner });
       });
       return Promise.all(updatePromises);
     })
@@ -41,8 +42,9 @@ function getAllCoinsTotals(coins) {
       const amount = coins[coinId].amount;
       const marketId = coins[coinId].marketId;
       const portfolioId = coins[coinId].portfolioId;
+      const owner = Object.keys(coins[coinId].owner).map(userId => userId);
       return getCoinMarketData(marketId)
-        .then(marketData => getPortfolioCoinTotal(amount, coinId, portfolioId, marketData));
+        .then(marketData => getPortfolioCoinTotal({ marketData, amount, coinId, portfolioId, owner }));
     });
     Promise
       .all(coinsMarketDataPromises)
@@ -60,13 +62,14 @@ function getCoinMarketData(id) {
   });
 }
 
-function getPortfolioCoinTotal(amount, coinId, portfolioId, marketData) {
+function getPortfolioCoinTotal(data) {
+  const { marketData, amount, coinId, portfolioId, owner } = data;
   return new Promise(resolve => {
     let price = 0;
     if (marketData && marketData.prices && marketData.prices.BTC && marketData.prices.BTC.price) {
       price = marketData.prices.BTC.price;
     }
-    resolve({ coinId, portfolioId, total: amount * price });
+    resolve({ coinId, portfolioId, owner, total: amount * price });
   });
 }
 
@@ -76,9 +79,11 @@ function getAllPortfoliosTotals(coinTotals) {
     const portfolioTotals = {};
     coinTotals.forEach(coin => {
       if (!portfolioTotals[coin.portfolioId]) {
-        portfolioTotals[coin.portfolioId] = coin.total;
+        portfolioTotals[coin.portfolioId] = {};
+        portfolioTotals[coin.portfolioId].lastTotal = coin.total;
+        portfolioTotals[coin.portfolioId].owner = coin.owner;
       } else {
-        portfolioTotals[coin.portfolioId] += coin.total;
+        portfolioTotals[coin.portfolioId].lastTotal += coin.total;
       }
     });
     resolve(portfolioTotals);
@@ -86,7 +91,8 @@ function getAllPortfoliosTotals(coinTotals) {
 }
 
 
-function updatePortfolioTotals(portfolioId, lastTotal) {
+function updatePortfolioTotals(data) {
+  const { portfolioId, lastTotal, owner } = data;
   const time = parseInt(Date.now() / 1000) * 1000;
   const totals = {};
   let mins = [];
@@ -188,9 +194,10 @@ function updatePortfolioTotals(portfolioId, lastTotal) {
         .then(total => {
           if (total) {
             Object.keys(totals).forEach(i => total[i] = totals[i]);
+            total.owner = owner;
             return total.save()
           }
-          const newTotal = new totalModel(Object.assign(totals, { portfolioId }));
+          const newTotal = new totalModel(Object.assign(totals, { portfolioId, owner }));
           newTotal.save();
         }).catch(console.log);
 

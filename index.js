@@ -2,7 +2,6 @@ const config = require('./config');
 const mongoose = require('mongoose');
 
 const { startServer } = require('./server');
-const { startWorkers } = require('./workers');
 
 mongoose.connect(config.mongo.uri, config.mongo.options);
 mongoose.Promise = Promise;

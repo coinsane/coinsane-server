@@ -3,10 +3,7 @@ const { firebase, mongo } = require('../lib/db');
 const rp = require('request-promise-native');
 
 const Bottleneck = require('bottleneck');
-const limiter = new Bottleneck({
-  maxConcurrent: 8,
-  minTime: 200
-});
+const limiter = new Bottleneck(config.cryptocompare.limiter.prices);
 const fetchLimit = limiter.wrap(rp);
 
 const { marketRef } = firebase();
@@ -33,7 +30,7 @@ function fetchPrices() {
           const reqSymbols = symbolsTemp.split(',');
           const reqIds = idsTemp.split(',');
           priceRequestPromises.push(fetchLimit({
-            uri: `${config.apiUri}data/pricemultifull`,
+            uri: `${config.cryptocompare.apiMinUri}/data/pricemultifull`,
             qs: {
               fsyms: symbolsTemp,
               tsyms: symbolsTo.join(',')

@@ -5,8 +5,8 @@ const rp = require('request-promise-native');
 const { marketRef } = firebase();
 const { marketModel } = mongo();
 
-function fetchCoins() {
-  const uri = `${config.apiUri2}data/coinlist`;
+function fetchMarket() {
+  const uri = `${config.cryptocompare.apiUri}/data/coinlist`;
   rp({ uri, json: true })
     .then(data => {
       const items = Object.keys(data.Data).map(key => {
@@ -39,8 +39,8 @@ function fetchCoins() {
             });
         }
       });
-      // console.log('fetchCoins done')
+      // console.log('fetchMarket done')
     });
 }
 
-module.exports = fetchCoins;
+module.exports = fetchMarket;
