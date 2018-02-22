@@ -4,6 +4,11 @@ const rp = require('request-promise-native');
 
 const { totalModel } = mongo();
 
+const redis = require('redis');
+const apiCache = redis.createClient(config.redis);
+const { promisify } = require('util');
+const apiCacheGet = promisify(apiCache.get).bind(apiCache);
+
 const {
   MINUTES_DAY,
   MINUTES_HOUR,
@@ -98,42 +103,44 @@ function apiTotals(req, res, next) {
     }
 
     return data;
-
-    // cache it
   }
 
-  getTotals()
-    .then(totals => {
-      sumTotals = {};
-      totals.forEach(total => {
+  const cacheKey = `totals:${JSON.stringify(Object.assign(req.query, { userId }))}`;
+  return apiCacheGet(cacheKey)
+    .then(cached => {
+      if (cached) return JSON.parse(cached);
+      return getTotals()
+        .then(totals => {
+          sumTotals = {};
+          totals.forEach(total => {
 
-        if (Array.isArray(total)) {
-          total.forEach(tick => {
-            if (!sumTotals[tick.time]) {
-              sumTotals[tick.time] = tick.value;
-            } else if (typeof tick.value === 'number') {
-              sumTotals[tick.time] += tick.value;
-            } else {
-              Object.keys(tick.value).forEach(key => {
-                sumTotals[tick.time][key] += tick.value[key];
+            if (Array.isArray(total)) {
+              total.forEach(tick => {
+                if (!sumTotals[tick.time]) {
+                  sumTotals[tick.time] = tick.value;
+                } else if (typeof tick.value === 'number') {
+                  sumTotals[tick.time] += tick.value;
+                } else {
+                  Object.keys(tick.value).forEach(key => {
+                    sumTotals[tick.time][key] += tick.value[key];
+                  });
+                }
               });
+            } else {
+              if (!sumTotals[total.time]) {
+                return sumTotals[total.time] = total.value;
+              } else if (typeof total.value === 'number') {
+                sumTotals[total.time] += total.value;
+              } else {
+                Object.keys(total.value).forEach(key => {
+                  sumTotals[total.time][key] += tick.value[key];
+                });
+              }
             }
           });
-        } else {
-          if (!sumTotals[total.time]) {
-            return sumTotals[total.time] = total.value;
-          } else if (typeof total.value === 'number') {
-            sumTotals[total.time] += total.value;
-          } else {
-            Object.keys(total.value).forEach(key => {
-              sumTotals[total.time][key] += tick.value[key];
-            });
-          }
-        }
-
-      });
-
-      return sumTotals;
+          apiCache.set(cacheKey, JSON.stringify(sumTotals), 'EX', 30 * 1000);
+          return sumTotals;
+        });
     })
     .then(totals => {
       res.send({
