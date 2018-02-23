@@ -19,3 +19,8 @@ Coinsane app server & workers.
 - fetchCoins (executes daily)
 - fetchPrices (every minute)
 - updateTotals (every minute)
+
+## TODO
+
+- Split web server & workers
+- 
