@@ -92,9 +92,9 @@ function apiHisto(req, res, next) {
             };
             if (response.success) {
               console.log('from response', cacheKey);
-              if (period == 'histoday') apiCache.set(cacheKey, JSON.stringify(data.Data), 'EX', 12 * 60 * 60 * 1000); // once in 12h
-              if (period == 'histohour') apiCache.set(cacheKey, JSON.stringify(data.Data), 'EX', 30 * 60 * 1000); // once in 30m
-              if (period == 'histominute') apiCache.set(cacheKey, JSON.stringify(data.Data), 'EX', 30 * 1000); // once in 30s
+              if (period == 'histoday') apiCache.set(cacheKey, JSON.stringify(response), 'EX', 12 * 60 * 60 * 1000); // once in 12h
+              if (period == 'histohour') apiCache.set(cacheKey, JSON.stringify(response), 'EX', 30 * 60 * 1000); // once in 30m
+              if (period == 'histominute') apiCache.set(cacheKey, JSON.stringify(response), 'EX', 30 * 1000); // once in 30s
             }
             resolve(response);
           });
