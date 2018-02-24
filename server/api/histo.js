@@ -101,10 +101,7 @@ function apiHisto(req, res, next) {
       })
   })
   .then(data => {
-    res.send({
-      success: true,
-      data
-    });
+    res.send(data);
     next();
   });
 
