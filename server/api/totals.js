@@ -14,7 +14,9 @@ const {
   MINUTES_HOUR,
   HOURS_DAY,
   HOURS_WEEK,
-  HOURS_MONTH
+  HOURS_MONTH,
+  DAYS_MONTH,
+  DAYS_YEAR
 } = config.constants;
 
 function apiTotals(req, res, next) {
@@ -36,6 +38,15 @@ function apiTotals(req, res, next) {
     }
     query.portfolioId = portfolioId;
     return totalModel.findOne(query).then(parseTotals);
+  };
+
+  const getTotalsPct = (totals) => {
+    const totalsKeys = Object.keys(totals);
+    const isNumber = typeof totals[totalsKeys[0]] === 'number';
+    const firstKey = isNumber ? totals[totalsKeys[0]] : totals[totalsKeys[0]].avg;
+    const lastKey = isNumber ? totals[totalsKeys[totalsKeys.length-1]] : totals[totalsKeys[totalsKeys.length-1]].avg;
+    const changePct = parseFloat(1 - firstKey / lastKey).toFixed(2);
+    return changePct;
   };
 
   const parseTotals = totals => {
@@ -147,7 +158,8 @@ function apiTotals(req, res, next) {
         success: true,
         data: {
           portfolioId,
-          totals
+          totals,
+          changePct: getTotalsPct(totals)
         }
       });
       return next();
