@@ -20,6 +20,7 @@ const config = {
     }
   },
   port: process.env.PORT,
+  authSecret: process.env.AUTH_SECRET,
   mongo: {
     uri: process.env.MONGODB_URI,
     options: {

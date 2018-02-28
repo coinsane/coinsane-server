@@ -21,6 +21,7 @@
     "dotenv": "^5.0.0",
     "firebase": "^4.9.1",
     "firebase-admin": "^5.8.2",
+    "jsonwebtoken": "^8.1.1",
     "memory-cache": "^0.2.0",
     "mongodb": "^3.0.2",
     "mongoose": "^5.0.6",
