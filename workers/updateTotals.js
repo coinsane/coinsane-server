@@ -1,24 +1,20 @@
 const config = require('../config');
-const { firebase, mongo } = require('../lib/db');
-const rp = require('request-promise-native');
+const { mongo } = require('../lib/db');
 
-const { coinsRef, marketRef, portfoliosRef } = firebase();
-const { marketModel, totalModel } = mongo();
+const { CoinModel, TotalModel } = mongo();
 
 module.exports = updatePortfoliosTotals;
 
 function updatePortfoliosTotals() {
   const startTime = new Date();
   return Promise.resolve()
-    .then(getAllCoins)
-    .then(getAllCoinsTotals)
     .then(getAllPortfoliosTotals)
     .then(portfoliosLastTotals => {
       const portfolioIds = Object.keys(portfoliosLastTotals);
-      const updatePromises = portfolioIds.map(portfolioId => {
-        const lastTotal = portfoliosLastTotals[portfolioId].lastTotal;
-        const owner = portfoliosLastTotals[portfolioId].owner;
-        return updatePortfolioTotals({ portfolioId, lastTotal, owner });
+      const updatePromises = portfolioIds.map(portfolio => {
+        const amount = portfoliosLastTotals[portfolio].amount;
+        const owner = portfoliosLastTotals[portfolio].owner;
+        return updatePortfolioTotals({ portfolio, amount, owner });
       });
       return Promise.all(updatePromises);
     })
@@ -28,71 +24,28 @@ function updatePortfoliosTotals() {
     });
 }
 
-function getAllCoins() {
-  return new Promise(resolve => {
-    coinsRef.once('value', snapshot => resolve(snapshot.val()));
-  });
-}
+function getAllPortfoliosTotals(coins) {
+  return CoinModel.find({}, 'amount portfolio owner')
+    .then(coins => {
+      if (!coins.length) return {};
 
-function getAllCoinsTotals(coins) {
-  return new Promise(resolve => {
-    const coinsIds = Object.keys(coins);
-    if (!coinsIds.length) return resolve({});
-    const coinsMarketDataPromises = coinsIds.map(coinId => {
-      const amount = coins[coinId].amount;
-      const marketId = coins[coinId].marketId;
-      const portfolioId = coins[coinId].portfolioId;
-      const owner = Object.keys(coins[coinId].owner).map(userId => userId);
-      return getCoinMarketData(marketId)
-        .then(marketData => getPortfolioCoinTotal({ marketData, amount, coinId, portfolioId, owner }));
+      const portfolioTotals = {};
+      coins.forEach(coin => {
+        if (!portfolioTotals[coin.portfolio]) {
+          portfolioTotals[coin.portfolio] = {};
+          portfolioTotals[coin.portfolio].amount = coin.amount;
+          portfolioTotals[coin.portfolio].owner = coin.owner;
+        } else {
+          portfolioTotals[coin.portfolio].amount += coin.amount;
+        }
+      });
+      return portfolioTotals;
     });
-    Promise
-      .all(coinsMarketDataPromises)
-      .then(resolve);
-  });
-}
-
-function getCoinMarketData(id) {
-  return new Promise(resolve => {
-    marketModel.findOne({ id })
-      .then(resolve);
-
-    // const marketIdRef = marketRef.child(`${id}`);
-    // marketIdRef.once('value', snapshot => resolve(snapshot.val()));
-  });
-}
-
-function getPortfolioCoinTotal(data) {
-  const { marketData, amount, coinId, portfolioId, owner } = data;
-  return new Promise(resolve => {
-    let price = 0;
-    if (marketData && marketData.prices && marketData.prices.BTC && marketData.prices.BTC.price) {
-      price = marketData.prices.BTC.price;
-    }
-    resolve({ coinId, portfolioId, owner, total: amount * price });
-  });
-}
-
-function getAllPortfoliosTotals(coinTotals) {
-  return new Promise(resolve => {
-    if (!coinTotals.length) return resolve({});
-    const portfolioTotals = {};
-    coinTotals.forEach(coin => {
-      if (!portfolioTotals[coin.portfolioId]) {
-        portfolioTotals[coin.portfolioId] = {};
-        portfolioTotals[coin.portfolioId].lastTotal = coin.total;
-        portfolioTotals[coin.portfolioId].owner = coin.owner;
-      } else {
-        portfolioTotals[coin.portfolioId].lastTotal += coin.total;
-      }
-    });
-    resolve(portfolioTotals);
-  });
 }
 
 
 function updatePortfolioTotals(data) {
-  const { portfolioId, lastTotal, owner } = data;
+  const { portfolio, amount, owner } = data;
   const time = parseInt(Date.now() / 1000) * 1000;
   const totals = {};
   let mins = [];
@@ -106,11 +59,11 @@ function updatePortfolioTotals(data) {
     HOURS_MONTH
   } = config.constants;
 
-  return getPortfolioTotals(portfolioId)
+  return TotalModel.findOne({ portfolio })
     .then(portfolioTotals => {
       const total = {
         time,
-        value: lastTotal || 0
+        value: amount || 0
       };
 
       if (!portfolioTotals) {
@@ -135,7 +88,6 @@ function updatePortfolioTotals(data) {
         days = portfolioTotals.days.concat([]);
         totals.daysCount = portfolioTotals.daysCount;
       }
-
 
       if (!totals.hoursCount) totals.hoursCount = 0;
       if (!totals.daysCount) totals.daysCount = 0;
@@ -190,60 +142,17 @@ function updatePortfolioTotals(data) {
       return totals;
     })
     .then(totals => {
-      totalModel.findOne({ portfolioId })
+      return TotalModel.findOne({ portfolio })
         .then(total => {
           if (total) {
             Object.keys(totals).forEach(i => total[i] = totals[i]);
             total.owner = owner;
-            return total.save()
+            return total.save().then();
           }
-          const newTotal = new totalModel(Object.assign(totals, { portfolioId, owner }));
-          newTotal.save();
+          const newTotal = new TotalModel(Object.assign(totals, { portfolio, owner }));
+          return newTotal.save().then();
         }).catch(console.log);
-
-      const totalsObj = {};
-      totals.mins.forEach(item => {
-        if (!totalsObj.mins) totalsObj.mins = {};
-        totalsObj.mins[item.time] = item.value || 0;
-      });
-
-      if (totals.hours && totals.hours.length) {
-        totalsObj.hours = {};
-        totals.hours.forEach(item => {
-          totalsObj.hours[item.time] = {
-            min: item.value['min'] || 0,
-            max: item.value['max'] || 0,
-            avg: item.value['avg'] || 0
-          };
-        });
-      }
-
-      if (totals.days && totals.days.length) {
-        totalsObj.days = {};
-        totals.days.forEach(item => {
-          totalsObj.days[item.time] = {
-            min: item.value['min'] || 0,
-            max: item.value['max'] || 0,
-            avg: item.value['avg'] || 0
-          };
-        });
-      }
-
-      const portfolioTotalsRef = portfoliosRef.child(`${portfolioId}/totals`);
-      portfolioTotalsRef.set(totalsObj).catch(console.log);
-      return;
     });
-}
-
-
-function getPortfolioTotals(portfolioId) {
-  return new Promise(resolve => {
-    totalModel.findOne({ portfolioId })
-      .then(resolve);
-
-    // const portfolioTotalsRef = portfoliosRef.child(`${portfolioId}/totals`);
-    // portfolioTotalsRef.once('value', snapshot => resolve(snapshot.val()));
-  });
 }
 
 function getMinMaxAvgHours(arr) {
@@ -268,24 +177,4 @@ function getMinMaxAvgDays(arr) {
     sum = sum + arr[i].value.avg;
   }
   return { min, max, avg: sum / arr.length }
-}
-
-
-function totalObjToArray(obj) {
-  if (!obj) return [];
-  return Object.keys(obj).map(key => {
-    return {
-      time: key,
-      value: obj[key] || 0
-    }
-  });
-}
-
-function totalArrayToObj(arr) {
-  if (!arr || !arr.length) return {};
-  const obj = {};
-  arr.forEach(item => {
-    obj[item.time] = item.value || 0;
-  });
-  return obj;
 }

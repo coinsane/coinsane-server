@@ -1,21 +1,22 @@
 const config = require('../config');
-const { firebase, mongo } = require('../lib/db');
+const { mongo } = require('../lib/db');
 const rp = require('request-promise-native');
 
 const Bottleneck = require('bottleneck');
 const limiter = new Bottleneck(config.cryptocompare.limiter.prices);
 const fetchLimit = limiter.wrap(rp);
 
-const { marketRef } = firebase();
-const { marketModel } = mongo();
+const { MarketModel } = mongo();
 
+
+// TODO fetch fiat price (Currency)
 function fetchPrices() {
   const startTime = new Date();
-  return marketModel.find({})
+  return MarketModel.find({})
     .then(markets => {
       const priceRequestPromises = [];
 
-      const symbolsTo = ['BTC','USD','RUB'];
+      const symbolsTo = ['BTC','USD','RUB']; // TODO
 
       let symbolsTemp = '';
       let idsTemp = '';
@@ -40,19 +41,13 @@ function fetchPrices() {
             const data = {};
             reqSymbols.forEach((symbol, index) => {
               if (priceData && priceData.RAW[symbol]) {
-                // data[`${reqIds[index]}`] = priceData.RAW[symbol]; // format this
-
                 data[`${reqIds[index]}`] = {};
 
                 const pricesRaw = priceData.RAW[symbol];
 
-                // console.log('data', data)
-                // console.log('pricesRaw', pricesRaw[symbolsTo[0]])
-
                 symbolsTo.forEach(symbolTo => {
                   data[`${reqIds[index]}`][symbolTo] = {};
                   const price = pricesRaw[symbolTo];
-                  // console.log('price', price);
                   if (price) {
                     if (price.PRICE) data[`${reqIds[index]}`][symbolTo].price = price.PRICE;
                     if (price.LASTUPDATE) data[`${reqIds[index]}`][symbolTo].lastUpdate = price.LASTUPDATE;
@@ -90,17 +85,14 @@ function fetchPrices() {
       return Promise.all(priceRequestPromises)
         .then(results => {
           let resultsAll = {};
-          results.forEach((item, index) => {
+          results.forEach(item => {
             resultsAll = Object.assign(resultsAll, item);
           });
           return resultsAll;
         })
         .then(prices => {
           Object.keys(prices).forEach(id => {
-            const marketIdPricesRef = marketRef.child(`${id}/prices`);
-            marketIdPricesRef.set(prices[id]).catch(console.log);
-
-            marketModel.findOne({ id })
+            MarketModel.findOne({ id })
               .then(market => {
                 if (market) {
                   market.prices = prices[id];

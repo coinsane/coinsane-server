@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const config = require('../../config');
 const { mongo } = require('../../lib/db');
-const { userModel } = mongo();
+const { UserModel } = mongo();
 
 function getToken(req, res, next) {
   const token = _getToken(req);
@@ -67,7 +67,7 @@ function _getUser(token) {
 }
 
 function _createAnonymousUser() {
-  const user = new userModel({ type: 'anonymous' });
+  const user = new UserModel({ type: 'anonymous' });
   return user.save().then(user => user);
 }
 
@@ -75,7 +75,7 @@ function _getUserByToken(token) {
   return new Promise((resolve, reject) => {
     jwt.verify(token, config.authSecret, (err, decoded) => {
       if (err || !decoded) return reject(err);
-      userModel.findOne({ _id: decoded._id })
+      UserModel.findOne({ _id: decoded._id })
         .then(user => {
           if (!user) return _createAnonymousUser().then(resolve);
           return resolve(user);

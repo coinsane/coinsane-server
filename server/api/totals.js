@@ -2,7 +2,7 @@ const config = require('../../config');
 const { mongo } = require('../../lib/db');
 const rp = require('request-promise-native');
 
-const { totalModel } = mongo();
+const { TotalModel } = mongo();
 
 const redis = require('redis');
 const apiCache = redis.createClient(config.redis);
@@ -21,27 +21,28 @@ const {
 
 function apiTotals(req, res, next) {
   const { portfolioId, range } = req.query;
-  const { userId } = req.authorization;
+  const { _id } = req.user;
 
   if (!portfolioId) {
     res.send({
       success: false,
-      data: 'These query params are required: portfolioId'
+      response: 'These query params are required: portfolioId'
     });
     return next();
   }
 
   const getTotals = () => {
-    const query = { owner: userId };
+    const query = { owner: _id };
     if (portfolioId === 'all') {
-      return totalModel.find(query).then(totals => totals.map(parseTotals));
+      return TotalModel.find(query).then(totals => totals.map(parseTotals));
     }
     query.portfolioId = portfolioId;
-    return totalModel.findOne(query).then(parseTotals);
+    return TotalModel.findOne(query).then(parseTotals);
   };
 
   const getTotalsPct = (totals) => {
     const totalsKeys = Object.keys(totals);
+    if (!totalsKeys.length) return 0;
     const isNumber = typeof totals[totalsKeys[0]] === 'number';
     const firstKey = isNumber ? totals[totalsKeys[0]] : totals[totalsKeys[0]].avg;
     const lastKey = isNumber ? totals[totalsKeys[totalsKeys.length-1]] : totals[totalsKeys[totalsKeys.length-1]].avg;
@@ -116,7 +117,7 @@ function apiTotals(req, res, next) {
     return data;
   }
 
-  const cacheKey = `totals:${JSON.stringify(Object.assign(req.query, { userId }))}`;
+  const cacheKey = `totals:${JSON.stringify(Object.assign(req.query, { _id }))}`;
   return apiCacheGet(cacheKey)
     .then(cached => {
       if (cached) return JSON.parse(cached);
@@ -156,7 +157,7 @@ function apiTotals(req, res, next) {
     .then(totals => {
       res.send({
         success: true,
-        data: {
+        response: {
           portfolioId,
           totals,
           changePct: getTotalsPct(totals)

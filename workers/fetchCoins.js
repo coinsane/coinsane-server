@@ -1,9 +1,8 @@
 const config = require('../config');
-const { firebase, mongo } = require('../lib/db');
+const { mongo } = require('../lib/db');
 const rp = require('request-promise-native');
 
-const { marketRef } = firebase();
-const { marketModel } = mongo();
+const { MarketModel } = mongo();
 
 function fetchMarket() {
   const uri = `${config.cryptocompare.apiUri}/data/coinlist`;
@@ -24,22 +23,16 @@ function fetchMarket() {
       });
 
       items.forEach(item => {
-        if (item.symbol.indexOf('*') === -1) {
-          const marketIdRef = marketRef.child(item.id);
-          marketIdRef.set(item).catch(console.log);
-
-          marketModel.findOne({ id: item.id })
-            .then(market => {
-              if (market) {
-                Object.keys(item).map(i => market[i] = item[i]);
-                return market.save();
-              }
-              const newMarket = new marketModel(item);
-              newMarket.save();
-            });
-        }
+        MarketModel.findOne({ id: item.id })
+          .then(market => {
+            if (market) {
+              Object.keys(item).map(i => market[i] = item[i]);
+              return market.save();
+            }
+            const newMarket = new MarketModel(item);
+            newMarket.save();
+          });
       });
-      // console.log('fetchMarket done')
     });
 }
 
