@@ -8,6 +8,7 @@ const apiTotals = require('./api/totals');
 const { postPortfolios, getPortfolios, updatePortfolios, delPortfolios } = require('./api/portfolios');
 const { addCoin, getCoin, updateCoin, delCoin } = require('./api/coins');
 const { getTransaction, updateTransaction, delTransaction } = require('./api/transactions');
+const { search } = require('./api/search');
 
 function startServer() {
   const server = restify.createServer();
@@ -36,6 +37,8 @@ function startServer() {
   server.get('/transactions', getTransaction);
   server.put('/transactions', updateTransaction);
   server.del('/transactions', delTransaction);
+
+  server.get('/search', search);
 
   server.get('/currencies', (req, res, next) => {
     require('../lib/populate/currencies')();
