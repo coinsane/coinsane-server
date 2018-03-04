@@ -72,7 +72,7 @@ function apiHisto(req, res, next) {
     e,
   }
 
-  const cacheKey = `histo:${JSON.stringify(req.query)}`;
+  const cacheKey = `${config.env}:histo:${JSON.stringify(req.query)}`;
 
   return new Promise((resolve, reject) => {
     apiCacheGet(cacheKey)
@@ -92,9 +92,9 @@ function apiHisto(req, res, next) {
             };
             if (response.success) {
               console.log('from response', cacheKey);
-              if (period == 'histoday') apiCache.set(cacheKey, JSON.stringify(response), 'EX', 12 * 60 * 60 * 1000); // once in 12h
-              if (period == 'histohour') apiCache.set(cacheKey, JSON.stringify(response), 'EX', 30 * 60 * 1000); // once in 30m
-              if (period == 'histominute') apiCache.set(cacheKey, JSON.stringify(response), 'EX', 30 * 1000); // once in 30s
+              if (period == 'histoday') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinDay); // once in 12h
+              if (period == 'histohour') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinHour); // once in 30m
+              if (period == 'histominute') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinMinute); // once in 30s
             }
             resolve(response);
           });

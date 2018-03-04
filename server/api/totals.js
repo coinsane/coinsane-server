@@ -117,7 +117,7 @@ function apiTotals(req, res, next) {
     return data;
   }
 
-  const cacheKey = `totals:${JSON.stringify(Object.assign(req.query, { _id }))}`;
+  const cacheKey = `${config.env}:totals:${JSON.stringify(Object.assign(req.query, { _id }))}`;
   return apiCacheGet(cacheKey)
     .then(cached => {
       if (cached) return JSON.parse(cached);
@@ -150,7 +150,7 @@ function apiTotals(req, res, next) {
               }
             }
           });
-          apiCache.set(cacheKey, JSON.stringify(sumTotals), 'EX', 30 * 1000);
+          apiCache.set(cacheKey, JSON.stringify(sumTotals), 'EX', config.cacheTime.totals);
           return sumTotals;
         });
     })

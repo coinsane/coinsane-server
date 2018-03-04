@@ -1,6 +1,7 @@
 process.env.NODE_ENV === 'dev' && require('dotenv').config();
 
 const config = {
+  env: process.env.NODE_ENV,
   appName: 'Coinsane',
   cryptocompare: {
     apiUri: process.env.CRYPTOCOMPARE_API,
@@ -15,6 +16,9 @@ const config = {
         minTime: 1000
       }
     }
+  },
+  coinmarketcap: {
+    apiUri: process.env.COINMARKETCAP_API,
   },
   port: process.env.PORT,
   authSecret: process.env.AUTH_SECRET,
@@ -36,6 +40,15 @@ const config = {
     HOURS_MONTH: 720,
     DAYS_MONTH: 30,
     DAYS_YEAR: 30,
+  },
+  cacheTime: {
+    search: process.env.CACHE_TIME_SEARCH,
+    market: process.env.CACHE_TIME_MARKET,
+    marketCap: process.env.CACHE_TIME_MARKET_CAP,
+    totals: process.env.CACHE_TIME_TOTALS,
+    coinDay: process.env.CACHE_TIME_COIN_DAY,
+    coinHour: process.env.CACHE_TIME_COIN_HOUR,
+    coinMinute: process.env.CACHE_TIME_COIN_MINUTE,
   }
 };
 
