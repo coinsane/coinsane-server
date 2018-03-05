@@ -2,12 +2,13 @@ const jwt = require('jsonwebtoken');
 
 const config = require('../../config');
 const { mongo } = require('../../lib/db');
-const { UserModel } = mongo();
+const { UserModel, PortfolioModel } = mongo();
 
 function getToken(req, res, next) {
   const token = _getToken(req);
 
   _getUser(token)
+    .then(_createNewPortfolio)
     .then(user => {
       return res.send({
         success: true,
@@ -91,6 +92,24 @@ function _getToken(req) {
   const authParams = authHeader.split(' ');
   const token = authParams.length > 1 ? authParams[1].split('=')[1] : '';
   return token;
+}
+
+function _createNewPortfolio(user) {
+  const query = {
+    owner: user._id,
+    isActive: true
+  };
+  return PortfolioModel.count(query).then(count => {
+    if (!count) {
+      const newPortfolio = new PortfolioModel({
+        owner: user._id,
+        title: 'My portfolio',
+        inTotal: true,
+      });
+      newPortfolio.save()
+    }
+    return user;
+  });
 }
 
 module.exports = {
