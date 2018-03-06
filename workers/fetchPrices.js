@@ -40,7 +40,7 @@ function fetchPrices() {
           }).then(priceData => {
             const data = {};
             reqSymbols.forEach((symbol, index) => {
-              if (priceData && priceData.RAW[symbol]) {
+              if (priceData && priceData.RAW && priceData.RAW[symbol]) {
                 data[`${reqIds[index]}`] = {};
 
                 const pricesRaw = priceData.RAW[symbol];

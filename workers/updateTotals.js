@@ -26,17 +26,25 @@ function updatePortfoliosTotals() {
 
 function getAllPortfoliosTotals(coins) {
   return CoinModel.find({}, 'amount portfolio owner')
+    .populate([
+      {
+        path: 'market',
+        model: 'Market',
+        select: 'symbol prices.BTC.price',
+      }
+    ])
     .then(coins => {
       if (!coins.length) return {};
 
       const portfolioTotals = {};
       coins.forEach(coin => {
+        const amount = coin.market.symbol === 'BTC' ? coin.amount : coin.market.prices.BTC.price * coin.amount;
         if (!portfolioTotals[coin.portfolio]) {
           portfolioTotals[coin.portfolio] = {};
-          portfolioTotals[coin.portfolio].amount = coin.amount;
+          portfolioTotals[coin.portfolio].amount = amount;
           portfolioTotals[coin.portfolio].owner = coin.owner;
         } else {
-          portfolioTotals[coin.portfolio].amount += coin.amount;
+          portfolioTotals[coin.portfolio].amount += amount;
         }
       });
       return portfolioTotals;
