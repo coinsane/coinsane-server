@@ -47,7 +47,7 @@ function getPortfolios(req, res, next) {
            {
              path: 'market',
              model: 'Market',
-             select: 'name symbol imageUrl prices.BTC.price prices.USD.price prices.RUB.price',
+             select: 'name symbol imageUrl prices.BTC.price prices.USD.price prices.RUB.price prices.BTC.changePctDay prices.USD.changePctDay prices.RUB.changePctDay',
            },
          ],
        },
