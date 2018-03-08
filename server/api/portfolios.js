@@ -1,5 +1,6 @@
 const config = require('../../config');
 const { mongo } = require('../../lib/db');
+const { getTotals, getTotalsPct, getLastTotal } = require('../../lib/services/totals');
 
 const { PortfolioModel } = mongo();
 
@@ -29,14 +30,67 @@ function postPortfolios(req, res, next) {
 }
 
 function getPortfolios(req, res, next) {
-  const query = {
-    owner: req.user._id,
+  const owner = req.user._id;
+  const portfolio = req.query.portfolioId;
+  const symbol = req.query.symbol || 'BTC';
+  const range = req.query.range || '1d';
+
+  const portfolioQuery = {
+    owner,
     isActive: true
   };
-  if (req.query.portfolioId) query._id = req.query.portfolioId;
+  if (portfolio) {
+    portfolioQuery._id = portfolio;
+  }
 
-  PortfolioModel
-    .find(query, 'inTotal title')
+  // TODO update response with a currency
+
+  _getPortfolios(portfolioQuery)
+    .then(portfolios => {
+      return Promise.all(portfolios.map(portfolio => {
+        return Promise.all([
+          getTotalsPct(owner, portfolio._id, range),
+          getLastTotal(owner, portfolio._id),
+        ])
+        .then(all => {
+          portfolio.changePct = all[0];
+          portfolio.amount = all[1];
+          return portfolio;
+        })
+      }));
+    })
+    // .then(portfolios => {
+    //   return portfolios.map(portfolio => {
+    //     portfolio.amount = 0;
+    //     portfolio.coins.forEach(coin => {
+    //       const amount = coin.market.symbol === 'BTC' ? coin.amount : coin.market.prices.BTC.price * coin.amount;
+    //       portfolio.amount += amount;
+    //     });
+    //     return portfolio;
+    //   });
+    // })
+    .then(portfolios => {
+      return res.send({
+        success: true,
+        response: {
+          portfolios
+        }
+      });
+    })
+    .then(next)
+    .catch(err => {
+      return res.send({
+        success: false,
+        response: {
+          message: err
+        }
+      });
+    });
+}
+
+const _getPortfolios = (portfolioQuery) => {
+  return PortfolioModel
+    .find(portfolioQuery, 'inTotal title')
     .populate([
       {
          path: 'coins',
@@ -52,23 +106,7 @@ function getPortfolios(req, res, next) {
          ],
        },
     ])
-    .then(portfolios => {
-      return res.send({
-        success: true,
-        response: {
-          portfolios: portfolios
-        }
-      });
-    })
-    .then(next)
-    .catch(err => {
-      return res.send({
-        success: false,
-        response: {
-          message: err
-        }
-      });
-    });
+    .then(portfolios => portfolios);
 }
 
 function updatePortfolios(req, res, next) {
