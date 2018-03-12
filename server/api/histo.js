@@ -98,7 +98,7 @@ function apiHisto(req, res, next) {
             }
             resolve(response);
           });
-      })
+      });
   })
   .then(data => {
     res.send(data);

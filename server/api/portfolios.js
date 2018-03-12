@@ -50,25 +50,25 @@ function getPortfolios(req, res, next) {
       return Promise.all(portfolios.map(portfolio => {
         return Promise.all([
           getTotalsPct(owner, portfolio._id, range),
-          getLastTotal(owner, portfolio._id),
+          // getLastTotal(owner, portfolio._id),
         ])
         .then(all => {
           portfolio.changePct = all[0];
-          portfolio.amount = all[1];
+          // portfolio.amount = all[1];
           return portfolio;
         })
       }));
     })
-    // .then(portfolios => {
-    //   return portfolios.map(portfolio => {
-    //     portfolio.amount = 0;
-    //     portfolio.coins.forEach(coin => {
-    //       const amount = coin.market.symbol === 'BTC' ? coin.amount : coin.market.prices.BTC.price * coin.amount;
-    //       portfolio.amount += amount;
-    //     });
-    //     return portfolio;
-    //   });
-    // })
+    .then(portfolios => {
+      return portfolios.map(portfolio => {
+        portfolio.amount = 0;
+        portfolio.coins.forEach(coin => {
+          const amount = coin.market.symbol === 'BTC' ? coin.amount : coin.market.prices[symbol].price * coin.amount;
+          portfolio.amount += amount;
+        });
+        return portfolio;
+      });
+    })
     .then(portfolios => {
       return res.send({
         success: true,
@@ -110,18 +110,18 @@ const _getPortfolios = (portfolioQuery) => {
 }
 
 function updatePortfolios(req, res, next) {
-  if (!req.body.portfolioId) {
+  if (!req.body._id) {
     res.send({
       success: false,
       response: {
-        message: 'portfolioId param is required'
+        message: '_id param is required'
       }
     });
     return next();
   }
 
   const query = {
-    _id: req.body.portfolioId,
+    _id: req.body._id,
     owner: req.user._id
   };
 
@@ -138,8 +138,8 @@ function updatePortfolios(req, res, next) {
         return next();
       }
 
-      if (req.body.title) portfolio.title = req.body.title;
-      if (req.body.inTotal) portfolio.inTotal = req.body.inTotal;
+      portfolio.title = req.body.title;
+      portfolio.inTotal = req.body.inTotal;
 
       return portfolio.save()
         .then(updatedPortfolio => {
