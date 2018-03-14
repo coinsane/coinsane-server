@@ -9,16 +9,7 @@ const apiCacheGet = promisify(apiCache.get).bind(apiCache);
 const { MarketModel, CurrencyModel } = mongo();
 
 function search(req, res, next) {
-  if (!req.query.type || !req.query.q || req.query.q.length < 2) {
-    return res.send({
-      success: false,
-      response: {
-        message: 'these properties are required: type, q'
-      }
-    });
-  }
-
-  const limit = req.query.limit ? parseInt(req.query.limit) : null;
+  const limit = req.query.limit ? parseInt(req.query.limit) : config.search.limit;
   const skip = req.query.skip ? parseInt(req.query.skip) : null;
 
   const cacheKey = `${config.env}:search:${JSON.stringify(req.query)}`;
@@ -28,53 +19,49 @@ function search(req, res, next) {
         return JSON.parse(cached);
       }
 
-      const q = new RegExp(req.query.q, 'i');
-      let queryModel;
+      const q = req.query.q ? new RegExp(req.query.q, 'i') : null;
+      const promiseQuery = [];
       let query;
 
-      switch (req.query.type) {
-        case 'market':
-          query = {
-            $or: [
-              { symbol: q },
-              { name: q },
-            ]
-          };
-          queryModel = Promise.all([
-            MarketModel.find(query, 'order name symbol imageUrl').skip(skip).limit(limit).sort('order'),
-            MarketModel.count(query),
-          ])
-          break;
-        case 'currency':
-          query = {
-            $or: [
-              { symbol: q },
-              { code: q },
-              { name: q },
-              { symbolNative: q },
-            ]
-          };
-          queryModel = Promise.all([
-            CurrencyModel.find(query, 'symbol code name').skip(skip).limit(limit),
-            CurrencyModel.count(query),
-          ]);
-          break;
-        default:
-          return res.send({
-            success: false,
-            response: {
-              message: 'unsupported search type'
-            }
-          });
+      if (!req.query.type || req.query.type === 'market') {
+        query = q ? {
+          $or: [
+            { symbol: q },
+            { name: q },
+          ]
+        } : {};
+        promiseQuery.push(MarketModel.find(query, 'order name symbol imageUrl').skip(skip).limit(limit).sort('order'));
+        promiseQuery.push(MarketModel.count(query))
       }
 
-      return queryModel.then(all => {
-        const result = all[0];
-        const count = all[1];
-        const response = { result, count };
-        apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.search);
-        return response;
-      })
+      if (!req.query.type || req.query.type === 'currency') {
+        query = q ? {
+          $or: [
+            { symbol: q },
+            { code: q },
+            { name: q },
+            { symbolNative: q },
+          ]
+        } : {};
+        promiseQuery.push(CurrencyModel.find(query, 'symbol code name').skip(skip).limit(limit));
+        promiseQuery.push(CurrencyModel.count(query))
+      }
+
+      return Promise.all(promiseQuery)
+        .then(all => {
+          let result;
+          let count;
+          if (all.length === 4) {
+            result = [...all[0], ...all[2]];
+            count = all[1] + all[3];
+          } else {
+            result = all[0];
+            count = all[1];
+          }
+          const response = { result, count };
+          apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.search);
+          return response;
+        })
     })
     .then(response => {
       return res.send({

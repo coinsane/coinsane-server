@@ -41,6 +41,9 @@ const config = {
     DAYS_MONTH: 30,
     DAYS_YEAR: 30,
   },
+  search: {
+    limit: parseInt(process.env.SEARCH_RESULTS_DEFAULT),
+  },
   cacheTime: {
     search: process.env.CACHE_TIME_SEARCH,
     market: process.env.CACHE_TIME_MARKET,
