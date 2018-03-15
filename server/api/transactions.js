@@ -42,7 +42,14 @@ function getTransaction(req, res, next) {
     });
 }
 
-function updateTransaction(req, res, next) {}
+function updateTransaction(req, res, next) {
+  res.send({
+    success: false,
+    response: {
+      message: 'not ready yet'
+    }
+  });
+}
 
 function delTransaction(req, res, next) {
   if (!req.body.transactionId) {
