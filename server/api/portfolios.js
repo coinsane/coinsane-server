@@ -9,7 +9,7 @@ function postPortfolios(req, res, next) {
     owner: req.user._id,
     ...req.body
   });
-  newPortfolio.save()
+  return newPortfolio.save()
     .then(portfolio => {
       return res.send({
         success: true,
@@ -18,7 +18,6 @@ function postPortfolios(req, res, next) {
         }
       });
     })
-    .then(next)
     .catch(err => {
       return res.send({
         success: false,
@@ -77,7 +76,6 @@ function getPortfolios(req, res, next) {
         }
       });
     })
-    .then(next)
     .catch(err => {
       return res.send({
         success: false,
@@ -151,7 +149,6 @@ function updatePortfolios(req, res, next) {
           });
         });
     })
-    .then(next)
     .catch(err => {
       res.send({
         success: false,
@@ -203,7 +200,6 @@ function delPortfolios(req, res, next) {
           });
         })
     })
-    .then(next)
     .catch(err => {
       res.send({
         success: false,
