@@ -7,7 +7,7 @@ const config = {
     apiUri: process.env.CRYPTOCOMPARE_API,
     apiMinUri: process.env.CRYPTOCOMPARE_API_MIN,
     limiter: {
-      prices: {
+      price: {
         maxConcurrent: 8,
         minTime: 200
       },
@@ -46,6 +46,7 @@ const config = {
   },
   cacheTime: {
     search: process.env.CACHE_TIME_SEARCH,
+    price: process.env.CACHE_TIME_PRICE,
     market: process.env.CACHE_TIME_MARKET,
     marketCap: process.env.CACHE_TIME_MARKET_CAP,
     totals: process.env.CACHE_TIME_TOTALS,

@@ -10,6 +10,7 @@ const { addCoin, getCoin, updateCoin, delCoin } = require('./api/coins');
 const { getTransaction, updateTransaction, delTransaction } = require('./api/transactions');
 const { search } = require('./api/search');
 const { getMarket, getMarketCap } = require('./api/market');
+const { getPrice } = require('./api/price');
 
 function startServer() {
   const server = restify.createServer();
@@ -43,6 +44,8 @@ function startServer() {
 
   server.get('/market', getMarket);
   server.get('/market/cap', getMarketCap);
+
+  server.get('/price', getPrice);
 
   server.get('/currencies', (req, res, next) => {
     require('../lib/populate/currencies')();
