@@ -1,8 +1,11 @@
 const config = require('../../config');
 const { mongo } = require('../../lib/db');
 const { getTotals, getTotalsPct, getLastTotal } = require('../../lib/services/totals');
+const { price } = require('../../lib/services/cryptocompare');
 
 const { PortfolioModel } = mongo();
+
+const BTC = 'BTC';
 
 function postPortfolios(req, res, next) {
   const newPortfolio = new PortfolioModel({
@@ -31,7 +34,7 @@ function postPortfolios(req, res, next) {
 function getPortfolios(req, res, next) {
   const owner = req.user._id;
   const portfolio = req.query.portfolioId;
-  const symbol = req.query.symbol || 'BTC';
+  const symbol = req.query.symbol || BTC;
   const range = req.query.range || '1d';
 
   const portfolioQuery = {
@@ -49,24 +52,14 @@ function getPortfolios(req, res, next) {
       return Promise.all(portfolios.map(portfolio => {
         return Promise.all([
           getTotalsPct(owner, portfolio._id, range),
-          // getLastTotal(owner, portfolio._id),
+          _getLastTotal(portfolio.coins, symbol),
         ])
         .then(all => {
           portfolio.changePct = all[0];
-          // portfolio.amount = all[1];
+          portfolio.amount = all[1];
           return portfolio;
-        })
-      }));
-    })
-    .then(portfolios => {
-      return portfolios.map(portfolio => {
-        portfolio.amount = 0;
-        portfolio.coins.forEach(coin => {
-          const amount = coin.market.symbol === 'BTC' ? coin.amount : coin.market.prices[symbol].price * coin.amount;
-          portfolio.amount += amount;
         });
-        return portfolio;
-      });
+      }));
     })
     .then(portfolios => {
       return res.send({
@@ -84,6 +77,15 @@ function getPortfolios(req, res, next) {
         }
       });
     });
+}
+
+const _getLastTotal = (coins, symbol) => {
+  let amount = 0;
+  coins.forEach(coin => {
+    amount += coin.symbol === BTC ? coin.amount : coin.amount * coin.market.prices.BTC.price;
+  });
+  if (symbol === BTC) return Promise.resolve(amount);
+  return price(BTC, symbol).then(data => data.data[symbol] * amount);
 }
 
 const _getPortfolios = (portfolioQuery) => {

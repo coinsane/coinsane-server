@@ -10,7 +10,7 @@ const { addCoin, getCoin, updateCoin, delCoin } = require('./api/coins');
 const { getTransaction, updateTransaction, delTransaction } = require('./api/transactions');
 const { search } = require('./api/search');
 const { getMarket, getMarketCap } = require('./api/market');
-const { getPrice } = require('./api/price');
+const { getPrice, getPriceFull } = require('./api/price');
 const { getCategories, updateCategory, delCategory } = require('./api/categories');
 
 function startServer() {
@@ -47,6 +47,7 @@ function startServer() {
   server.get('/market/cap', getMarketCap);
 
   server.get('/price', getPrice);
+  server.get('/price/full', getPriceFull);
 
   server.get('/categories', getCategories);
   server.put('/categories', updateCategory);

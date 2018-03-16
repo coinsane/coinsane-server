@@ -4,6 +4,23 @@ const { mongo } = require('../../lib/db');
 const { MarketModel, PortfolioModel, CoinModel, TransactionModel, CurrencyModel, CategoryModel } = mongo();
 
 function addCoin(req, res, next) {
+  if (!(
+    req.body &&
+    req.body.coin &&
+    req.body.portfolio &&
+    (req.body.currency || req.body.market) &&
+    req.body.date &&
+    req.body.amount &&
+    req.body.total
+  )) {
+    return res.send({
+      success: false,
+      response: {
+        message: 'coin && portfolio && (currency || market) && date && amount && total params is required'
+      }
+    });
+  }
+
   const coinData = {
     owner: req.user._id,
     market: req.body.coin,
@@ -113,6 +130,15 @@ function addCoin(req, res, next) {
 }
 
 function getCoin(req, res, next) {
+  if (!(req.query && req.body.coinId)) {
+    return res.send({
+      success: false,
+      response: {
+        message: 'coinId param is required'
+      }
+    });
+  }
+
   const coinData = {
     owner: req.user._id,
     isActive: true,
@@ -169,17 +195,23 @@ function getCoin(req, res, next) {
     });
 }
 
-function updateCoin(req, res, next) {}
+function updateCoin(req, res, next) {
+  return res.send({
+    success: false,
+    response: {
+      message: 'not implemented'
+    }
+  });
+}
 
 function delCoin(req, res, next) {
-  if (!req.body.coinId) {
-    res.send({
+  if (!(req.body && req.body.coinId)) {
+    return res.send({
       success: false,
       response: {
         message: 'coinId param is required'
       }
     });
-    return next();
   }
 
   const query = {
@@ -212,7 +244,6 @@ function delCoin(req, res, next) {
           });
         });
     })
-    .then(next)
     .catch(err => {
       res.send({
         success: false,
