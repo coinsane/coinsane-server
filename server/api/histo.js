@@ -10,6 +10,8 @@ const apiCache = redis.createClient(config.redis);
 const { promisify } = require('util');
 const apiCacheGet = promisify(apiCache.get).bind(apiCache);
 
+const { pricehisto } = require('../../lib/services/cryptocompare');
+
 function apiHisto(req, res, next) {
   const { fsym, tsym, e = 'CCCAGG', range } = req.query;
 
@@ -79,7 +81,6 @@ function apiHisto(req, res, next) {
       .then(cacheValue => {
         if (cacheValue) {
           try {
-            console.log('from cache', cacheKey);
             const response = JSON.parse(cacheValue);
             return resolve(response);
           } catch (e) {}
@@ -88,10 +89,12 @@ function apiHisto(req, res, next) {
           .then(data => {
             const response = {
               success: data.Response === 'Success',
-              data: data.Data
+              data: {}
             };
+            data.Data.forEach(item => {
+              response.data[item.time] = (item.low + item.high) / 2;
+            })
             if (response.success) {
-              console.log('from response', cacheKey);
               if (period == 'histoday') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinDay); // once in 12h
               if (period == 'histohour') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinHour); // once in 30m
               if (period == 'histominute') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinMinute); // once in 30s
@@ -100,6 +103,7 @@ function apiHisto(req, res, next) {
           });
       });
   })
+  .then(formatHistoData)
   .then(data => {
     res.send(data);
     next();
@@ -107,4 +111,32 @@ function apiHisto(req, res, next) {
 
 }
 
-module.exports = apiHisto;
+function apiHistoPrice(req, res, next) {
+  const { fsym, tsyms, ts, markets = 'CCCAGG' } = req.query;
+
+  if (!(fsym && tsyms && ts)) {
+    res.send({
+      success: false,
+      data: 'These query params are required: fsym, tsyms, ts'
+    });
+    return next();
+  }
+
+  return pricehisto(fsym, tsyms, ts, { markets })
+    .then(data => {
+      res.send({
+        success: true,
+        data
+      });
+      next();
+    });
+}
+
+function formatHistoData(data) {
+  return data;
+}
+
+module.exports = {
+  apiHisto,
+  apiHistoPrice,
+};

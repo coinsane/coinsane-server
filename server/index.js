@@ -2,12 +2,12 @@ const config = require('../config');
 const restify = require('restify');
 
 const { checkAuth, getToken, getUser } = require('./api/auth');
-const apiHisto = require('./api/histo');
+const { apiHisto, apiHistoPrice } = require('./api/histo');
 const apiLimits = require('./api/limits');
 const apiTotals = require('./api/totals');
 const { postPortfolios, getPortfolios, updatePortfolios, delPortfolios } = require('./api/portfolios');
 const { addCoin, getCoin, updateCoin, delCoin } = require('./api/coins');
-const { getTransaction, updateTransaction, delTransaction } = require('./api/transactions');
+const { getTransactionsList, getTransaction, updateTransaction, delTransaction } = require('./api/transactions');
 const { search } = require('./api/search');
 const { getMarket, getMarketCap } = require('./api/market');
 const { getPrice, getPriceFull } = require('./api/price');
@@ -22,8 +22,15 @@ function startServer() {
   server.use(restify.plugins.queryParser());
   server.use(restify.plugins.bodyParser());
 
+  server.use((req,res,next) => {
+    if (req.query) console.log('req.query', req.query)
+    if (req.body) console.log('req.body', req.body)
+    next();
+  });
+
   server.get('/auth/getUser', getUser);
   server.get('/histo', apiHisto);
+  server.get('/histoprice', apiHistoPrice);
   server.get('/limits', apiLimits);
   server.get('/totals', apiTotals);
 
@@ -37,9 +44,10 @@ function startServer() {
   server.put('/coins', updateCoin);
   server.del('/coins', delCoin);
 
-  server.get('/transactions', getTransaction);
-  server.put('/transactions', updateTransaction);
-  server.del('/transactions', delTransaction);
+  server.get('/transactions', getTransactionsList);
+  server.get('/transaction', getTransaction);
+  server.put('/transaction', updateTransaction);
+  server.del('/transaction', delTransaction);
 
   server.get('/search', search);
 

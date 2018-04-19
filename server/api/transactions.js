@@ -3,6 +3,66 @@ const { mongo } = require('../../lib/db');
 
 const { CoinModel, TransactionModel } = mongo();
 
+const { pricehisto } = require('../../lib/services/cryptocompare');
+
+function getTransactionsList(req, res, next) {
+  const transactionData = {
+    coin: req.query.coinId,
+    owner: req.user._id,
+    isActive: true,
+  };
+
+  TransactionModel.find(transactionData, 'date buy amount total note category')
+    .sort('date')
+    .populate([
+      {
+        path: 'currency',
+        model: 'Currency',
+        select: 'symbol name code prices.BTC.price',
+      },
+      {
+        path: 'market',
+        model: 'Market',
+        select: 'symbol code prices.BTC.price',
+      },
+      {
+        path: 'category',
+        model: 'Category',
+        select: 'title color',
+      },
+    ])
+    .then(transactions => {
+      if (!transactions.length) {
+        res.send({
+          success: false,
+          response: {
+            message: 'transactions not found'
+          }
+        });
+        return next();
+      }
+      return Promise.all(transactions.map(transaction => {
+        console.log('transaction', transaction)
+        const fsym = transaction.currency.code || transaction.market.symbol;
+        const tsym = 'BTC,USD,RUB';
+        const ts = new Date(transaction.date).getTime();
+        return pricehisto(fsym, tsym, ts)
+          .then(histo => {
+            transaction.histo = histo[fsym];
+            return transaction;
+          });
+      }))
+      .then(transactions => {
+        res.send({
+          success: true,
+          response: {
+            transactions
+          }
+        });
+      });
+    });
+}
+
 function getTransaction(req, res, next) {
   const transactionData = {
     _id: req.query.transactionId,
@@ -21,6 +81,11 @@ function getTransaction(req, res, next) {
         path: 'currency',
         model: 'Currency',
         select: 'symbol code prices.BTC.price',
+      },
+      {
+        path: 'category',
+        model: 'Category',
+        select: 'title color',
       },
     ])
     .then(transaction => {
@@ -110,6 +175,7 @@ function delTransaction(req, res, next) {
 }
 
 module.exports = {
+  getTransactionsList,
   getTransaction,
   updateTransaction,
   delTransaction,
