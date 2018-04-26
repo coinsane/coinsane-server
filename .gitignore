@@ -1,3 +1,6 @@
 .env
 node_modules/
+.vscode/
+.expo/
+.idea/
 npm-debug.*

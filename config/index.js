@@ -9,16 +9,19 @@ const config = {
     limiter: {
       price: {
         maxConcurrent: 8,
-        minTime: 200
+        minTime: 200,
       },
       histo: {
         maxConcurrent: 1,
-        minTime: 1000
+        minTime: 1000,
       }
     }
   },
   coinmarketcap: {
     apiUri: process.env.COINMARKETCAP_API,
+  },
+  cryptonator: {
+    apiUri: process.env.CRYPTONATOR_API,
   },
   port: process.env.PORT,
   authSecret: process.env.AUTH_SECRET,
@@ -26,11 +29,11 @@ const config = {
     uri: process.env.MONGODB_URI,
     options: {
       keepAlive: 300000,
-      connectTimeoutMS: 30000
+      connectTimeoutMS: 30000,
     }
   },
   redis: {
-    url: process.env.REDISCLOUD_URL
+    url: process.env.REDISCLOUD_URL,
   },
   constants: {
     MINUTES_DAY: 1440,
@@ -53,7 +56,8 @@ const config = {
     coinDay: process.env.CACHE_TIME_COIN_DAY,
     coinHour: process.env.CACHE_TIME_COIN_HOUR,
     coinMinute: process.env.CACHE_TIME_COIN_MINUTE,
-  }
+    topPairs: process.env.CACHE_TIME_TOP_PAIRS,
+  },
 };
 
 module.exports = config;

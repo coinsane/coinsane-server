@@ -1,5 +1,6 @@
 const config = require('../../config');
 const { mongo } = require('../../lib/db');
+const { topPairs } = require('../../lib/services/cryptocompare');
 
 const rp = require('request-promise-native');
 const Bottleneck = require('bottleneck');
@@ -11,7 +12,7 @@ const apiCache = redis.createClient(config.redis);
 const { promisify } = require('util');
 const apiCacheGet = promisify(apiCache.get).bind(apiCache);
 
-const { MarketModel, CurrencyModel } = mongo();
+const { MarketModel } = mongo();
 
 function getMarket(req, res, next) {
   const limit = req.query.limit ? parseInt(req.query.limit) : null;
@@ -79,7 +80,29 @@ function getMarketCap(req, res, next) {
   });
 }
 
+function getMarketList(req, res, next) {
+  const { fsym, tsym, limit, nocache } = req.query;
+
+  if (!(fsym)) {
+    res.send({
+      success: false,
+      data: 'These query params are required: fsym',
+    });
+    return next();
+  }
+
+  return topPairs(fsym, tsym, { limit, nocache })
+    .then(data => {
+      res.send({
+        success: true,
+        data,
+      });
+      next();
+    });
+}
+
 module.exports = {
   getMarket,
   getMarketCap,
+  getMarketList,
 };

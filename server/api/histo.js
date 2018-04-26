@@ -18,7 +18,7 @@ function apiHisto(req, res, next) {
   if (!(fsym && tsym && e && range)) {
     res.send({
       success: false,
-      data: 'These query params are required: fsym, tsym, range'
+      data: 'These query params are required: fsym, tsym, range',
     });
     return next();
   }
@@ -72,7 +72,7 @@ function apiHisto(req, res, next) {
     aggregate,
     limit,
     e,
-  }
+  };
 
   const cacheKey = `${config.env}:histo:${JSON.stringify(req.query)}`;
 
@@ -89,15 +89,15 @@ function apiHisto(req, res, next) {
           .then(data => {
             const response = {
               success: data.Response === 'Success',
-              data: {}
+              data: {},
             };
             data.Data.forEach(item => {
               response.data[item.time] = (item.low + item.high) / 2;
-            })
+            });
             if (response.success) {
-              if (period == 'histoday') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinDay); // once in 12h
-              if (period == 'histohour') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinHour); // once in 30m
-              if (period == 'histominute') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinMinute); // once in 30s
+              if (period === 'histoday') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinDay); // once in 12h
+              if (period === 'histohour') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinHour); // once in 30m
+              if (period === 'histominute') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinMinute); // once in 30s
             }
             resolve(response);
           });
@@ -117,7 +117,7 @@ function apiHistoPrice(req, res, next) {
   if (!(fsym && tsyms && ts)) {
     res.send({
       success: false,
-      data: 'These query params are required: fsym, tsyms, ts'
+      data: 'These query params are required: fsym, tsyms, ts',
     });
     return next();
   }
@@ -126,7 +126,7 @@ function apiHistoPrice(req, res, next) {
     .then(data => {
       res.send({
         success: true,
-        data
+        data,
       });
       next();
     });

@@ -1,4 +1,3 @@
-const config = require('../../config');
 const { mongo } = require('../../lib/db');
 
 const { MarketModel, PortfolioModel, CoinModel, TransactionModel, CurrencyModel, CategoryModel } = mongo();
@@ -130,7 +129,7 @@ function addCoin(req, res, next) {
 }
 
 function getCoin(req, res, next) {
-  if (!(req.query && req.body.coinId)) {
+  if (!(req.query && req.query.coinId)) {
     return res.send({
       success: false,
       response: {
@@ -174,7 +173,7 @@ function getCoin(req, res, next) {
        {
          path: 'market',
          model: 'Market',
-         select: 'imageUrl name order symbol prices.BTC.price',
+         select: 'imageUrl name order symbol prices.BTC.price prices.BTC.marketCap prices.BTC.totalVolume24HTo prices.BTC.supply',
        },
     ])
     .then(coins => {

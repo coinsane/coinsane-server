@@ -1,37 +1,36 @@
-const config = require('../../config');
 const { mongo } = require('../../lib/db');
-const { getTotals, getTotalsPct, getLastTotal } = require('../../lib/services/totals');
+const { getTotalsPct } = require('../../lib/services/totals');
 const { price } = require('../../lib/services/cryptocompare');
 
 const { PortfolioModel } = mongo();
 
 const BTC = 'BTC';
 
-function postPortfolios(req, res, next) {
+function postPortfolios(req, res) {
   const newPortfolio = new PortfolioModel({
     owner: req.user._id,
-    ...req.body
+    ...req.body,
   });
   return newPortfolio.save()
     .then(portfolio => {
       return res.send({
         success: true,
         response: {
-          portfolio: portfolio
-        }
+          portfolio: portfolio,
+        },
       });
     })
     .catch(err => {
       return res.send({
         success: false,
         response: {
-          message: err
-        }
+          message: err,
+        },
       });
     });
 }
 
-function getPortfolios(req, res, next) {
+function getPortfolios(req, res) {
   const owner = req.user._id;
   const portfolio = req.query.portfolioId;
   const symbol = req.query.symbol || BTC;
@@ -65,16 +64,16 @@ function getPortfolios(req, res, next) {
       return res.send({
         success: true,
         response: {
-          portfolios
-        }
+          portfolios,
+        },
       });
     })
     .catch(err => {
       return res.send({
         success: false,
         response: {
-          message: err
-        }
+          message: err,
+        },
       });
     });
 }
@@ -86,7 +85,7 @@ const _getLastTotal = (coins, symbol) => {
   });
   if (symbol === BTC) return Promise.resolve(amount);
   return price(BTC, symbol).then(data => data.data[symbol] * amount);
-}
+};
 
 const _getPortfolios = (portfolioQuery) => {
   return PortfolioModel
@@ -101,28 +100,28 @@ const _getPortfolios = (portfolioQuery) => {
            {
              path: 'market',
              model: 'Market',
-             select: 'name symbol imageUrl prices.BTC.price prices.USD.price prices.RUB.price prices.BTC.changePctDay prices.USD.changePctDay prices.RUB.changePctDay',
+             select: 'name symbol imageUrl prices.BTC.price prices.USD.price prices.RUB.price prices.BTC.changePctDay prices.USD.changePctDay prices.RUB.changePctDay prices.BTC.marketCap prices.BTC.totalVolume24HTo prices.BTC.supply',
            },
          ],
        },
     ])
     .then(portfolios => portfolios);
-}
+};
 
 function updatePortfolios(req, res, next) {
   if (!req.body._id) {
     res.send({
       success: false,
       response: {
-        message: '_id param is required'
-      }
+        message: '_id param is required',
+      },
     });
     return next();
   }
 
   const query = {
     _id: req.body._id,
-    owner: req.user._id
+    owner: req.user._id,
   };
 
   PortfolioModel
@@ -132,8 +131,8 @@ function updatePortfolios(req, res, next) {
         res.send({
           success: false,
           response: {
-            message: 'portfolio not found'
-          }
+            message: 'portfolio not found',
+          },
         });
         return next();
       }
@@ -146,8 +145,8 @@ function updatePortfolios(req, res, next) {
           return res.send({
             success: true,
             response: {
-              portfolio: updatedPortfolio
-            }
+              portfolio: updatedPortfolio,
+            },
           });
         });
     })
@@ -155,8 +154,8 @@ function updatePortfolios(req, res, next) {
       res.send({
         success: false,
         response: {
-          message: err
-        }
+          message: err,
+        },
       });
     });
 }
@@ -166,15 +165,15 @@ function delPortfolios(req, res, next) {
     res.send({
       success: false,
       response: {
-        message: 'portfolioId param is required'
-      }
+        message: 'portfolioId param is required',
+      },
     });
     return next();
   }
 
   const query = {
     _id: req.body.portfolioId,
-    owner: req.user._id
+    owner: req.user._id,
   };
 
   PortfolioModel
@@ -184,8 +183,8 @@ function delPortfolios(req, res, next) {
         res.send({
           success: false,
           response: {
-            message: 'portfolio not found'
-          }
+            message: 'portfolio not found',
+          },
         });
         return next();
       }
@@ -197,8 +196,8 @@ function delPortfolios(req, res, next) {
           return res.send({
             success: true,
             response: {
-              portfolioId: portfolio._id
-            }
+              portfolioId: portfolio._id,
+            },
           });
         })
     })
@@ -206,8 +205,8 @@ function delPortfolios(req, res, next) {
       res.send({
         success: false,
         response: {
-          message: err
-        }
+          message: err,
+        },
       });
     });
 }
