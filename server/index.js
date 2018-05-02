@@ -12,6 +12,7 @@ const { search } = require('./api/search');
 const { getMarket, getMarketCap, getMarketList } = require('./api/market');
 const { getPrice, getPriceFull } = require('./api/price');
 const { getCategories, updateCategory, delCategory } = require('./api/categories');
+const { getSettings } = require('./api/settings');
 
 function startServer() {
   const server = restify.createServer();
@@ -61,6 +62,8 @@ function startServer() {
   server.get('/categories', getCategories);
   server.put('/categories', updateCategory);
   server.del('/categories', delCategory);
+
+  server.get('/settings', getSettings);
 
   server.get('/currencies', (req, res, next) => {
     require('../lib/populate/currencies')();

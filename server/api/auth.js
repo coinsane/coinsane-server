@@ -2,9 +2,9 @@ const jwt = require('jsonwebtoken');
 
 const config = require('../../config');
 const { mongo } = require('../../lib/db');
-const { UserModel, PortfolioModel } = mongo();
+const { UserModel, PortfolioModel, CurrencyModel, MarketModel } = mongo();
 
-function getToken(req, res, next) {
+function getToken(req, res) {
   const token = _getToken(req);
 
   _getUser(token)
@@ -13,17 +13,16 @@ function getToken(req, res, next) {
       return res.send({
         success: true,
         result: {
-          token: jwt.sign({ _id: user._id, type: user.type }, config.authSecret)
-        }
+          token: jwt.sign({ _id: user._id, type: user.type, settings: user.settings }, config.authSecret),
+        },
       })
     })
-    .then(next)
-    .catch(err => {
+    .catch(() => {
       res.send({
         success: false,
         result: {
-          message: 'Authorization fail'
-        }
+          message: 'Authorization fail',
+        },
       });
     });
 }
@@ -33,8 +32,8 @@ function checkAuth(req, res, next) {
   if (!token) return res.send({
     success: false,
     result: {
-      message: 'Authorization fail'
-    }
+      message: 'Authorization fail',
+    },
   });
 
   jwt.verify(token, config.authSecret, (err, user) => {
@@ -43,8 +42,8 @@ function checkAuth(req, res, next) {
       return res.send({
         success: false,
         result: {
-          message: 'Authorization fail'
-        }
+          message: 'Authorization fail',
+        },
       });
     }
     req.user = user;
@@ -56,8 +55,8 @@ function getUser(req, res, next) {
   res.send({
     success: true,
     result: {
-      user: req.user
-    }
+      user: req.user,
+    },
   });
   next();
 }
@@ -68,8 +67,14 @@ function _getUser(token) {
 }
 
 function _createAnonymousUser() {
-  const user = new UserModel({ type: 'anonymous' });
-  return user.save().then(user => user);
+  return _getDefaultCurrencies()
+    .then(currencies => {
+      const user = new UserModel({
+        type: 'anonymous',
+        settings: { currencies },
+      });
+      return user.save().then(user => user);
+    });
 }
 
 function _getUserByToken(token) {
@@ -110,6 +115,25 @@ function _createNewPortfolio(user) {
     }
     return user;
   });
+}
+
+function _getDefaultCurrencies() {
+  return Promise
+    .all([
+      MarketModel.findOne({ symbol: 'BTC' }, '_id symbol'),
+      CurrencyModel.findOne({ code: 'USD' }, '_id code'),
+    ])
+    .then(res => {
+      return res.map((item, index) => {
+        const currency = { system: true };
+        if (index === 0) {
+          currency.market = item;
+        } else {
+          currency.currency = item;
+        }
+        return currency;
+      });
+    });
 }
 
 module.exports = {
