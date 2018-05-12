@@ -2,6 +2,8 @@ const { mongo } = require('../../lib/db');
 
 const { MarketModel, PortfolioModel, CoinModel, TransactionModel, CurrencyModel, CategoryModel } = mongo();
 
+const { pricehisto } = require('../../lib/services/cryptocompare');
+
 function addCoin(req, res, next) {
   if (!(
     req.body &&
@@ -117,12 +119,25 @@ function addCoin(req, res, next) {
              },
           ])
           .then(coinData => {
-            res.send({
-              success: true,
-              response: {
-                coin: coinData,
-              }
-            });
+            Promise
+              .all(coinData.transactions.map(transaction => {
+                const fsym = transaction.currency.code || transaction.market.symbol;
+                const tsym = 'BTC,USD,RUB';
+                const ts = new Date(transaction.date).getTime();
+                return pricehisto(fsym, tsym, ts)
+                  .then(histo => {
+                    transaction.histo = histo[fsym];
+                    return transaction;
+                  });
+              }))
+              .then(transactions => {
+                res.send({
+                  success: true,
+                  response: {
+                    coin: { ...coinData, transactions },
+                  }
+                });
+              });
           })
       });
   })
