@@ -13,9 +13,22 @@ const { getMarket, getMarketCap, getMarketList } = require('./api/market');
 const { getPrice, getPriceFull } = require('./api/price');
 const { getCategories, updateCategory, delCategory } = require('./api/categories');
 const { getSettings } = require('./api/settings');
+const { getPages, getPage } = require('./api/pages');
 
 function startServer() {
   const server = restify.createServer();
+
+  // server.get('/pages', (req, res, next) => {
+  //   require('../lib/populate/pages')();
+  //   res.send();
+  //   next();
+  // });
+  //
+  // server.get('/currencies', (req, res, next) => {
+  //   require('../lib/populate/currencies')();
+  //   res.send();
+  //   next();
+  // });
 
   server.get('/auth/getToken', getToken);
   server.use(checkAuth);
@@ -65,11 +78,8 @@ function startServer() {
 
   server.get('/settings', getSettings);
 
-  server.get('/currencies', (req, res, next) => {
-    require('../lib/populate/currencies')();
-    res.send();
-    next();
-  });
+  server.get('/pages/', getPages);
+  server.get('/pages/:name', getPage);
 
   server.listen(config.port, () => {
     console.log('%s listening at %s', server.name, server.url);
