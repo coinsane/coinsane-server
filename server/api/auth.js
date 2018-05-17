@@ -13,7 +13,7 @@ function getToken(req, res) {
       return res.send({
         success: true,
         result: {
-          token: jwt.sign({ _id: user._id, type: user.type, settings: user.settings }, config.authSecret),
+          token: jwt.sign({ _id: user._id, type: user.type }, config.authSecret),
         },
       })
     })
@@ -120,8 +120,8 @@ function _createNewPortfolio(user) {
 function _getDefaultCurrencies() {
   return Promise
     .all([
-      MarketModel.findOne({ symbol: 'BTC' }, '_id symbol'),
-      CurrencyModel.findOne({ code: 'USD' }, '_id code'),
+      MarketModel.findOne({ symbol: 'BTC' }, '_id symbol imageUrl name'),
+      CurrencyModel.findOne({ code: 'USD' }, '_id code symbol decimalDigits'),
     ])
     .then(res => {
       return res.map((item, index) => {
