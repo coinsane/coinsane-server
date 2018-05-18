@@ -7,7 +7,7 @@ function getPages(req, res, next) {
     locale: 'en',
   };
 
-  PageModel.findOne(pageData, 'title content')
+  PageModel.find(pageData, 'name title content')
     .then(data => {
       if (!data || !data.length) {
         return res.send({
