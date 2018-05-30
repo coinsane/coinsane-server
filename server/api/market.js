@@ -25,16 +25,20 @@ function getMarket(req, res, next) {
         return JSON.parse(cached);
       }
 
-      const query = {};
+      const query = {
+        'prices.BTC.totalVolume24HTo': { $gt: 10 },
+        'prices.USD.lastVolume': { $gt: 0 },
+      };
 
       return Promise.all([
         MarketModel.find(query, 'order name symbol imageUrl prices.BTC.price prices.BTC.marketCap prices.BTC.totalVolume24HTo prices.BTC.changePct24H prices.BTC.supply prices.USD.price prices.USD.marketCap prices.USD.totalVolume24HTo prices.USD.changePct24H prices.USD.supply prices.RUB.price prices.RUB.marketCap prices.RUB.totalVolume24HTo prices.RUB.changePct24H prices.RUB.supply')
-          .skip(skip).limit(limit).sort('order'),
+          .sort('-prices.BTC.marketCap')
+          .skip(skip).limit(limit),
         MarketModel.count(query),
       ]).then(all => {
         const result = all[0];
         const count = all[1];
-        const response = { result, count };
+        const response = { result, count, skip, limit };
         apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.market);
         return response;
       })
@@ -62,6 +66,12 @@ function getMarketCap(req, res, next) {
         const uri = `${config.coinmarketcap.apiUri}/global/`;
         const qs = { convert: req.query.convert };
         return fetchLimit({ uri, qs, json: true })
+          .then(data => {
+            const symbol = req.query.convert ? req.query.convert.toLowerCase() : null;
+            const total = symbol && data[`total_market_cap_${symbol}`] ? data[`total_market_cap_${symbol}`] : 0;
+            const volume = symbol && data[`total_24h_volume_${symbol}`] ? data[`total_24h_volume_${symbol}`] : 0;
+            return { total, volume };
+          })
           .then(data => {
             const response = {
               success: true,
