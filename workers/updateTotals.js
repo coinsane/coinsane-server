@@ -47,6 +47,8 @@ function getAllPortfoliosTotals(coins) {
           } else {
             portfolioTotals[coin.portfolio].amount += amount;
           }
+        } else {
+          console.log('getAllPortfoliosTotals ERROR', coin)
         }
       });
       return portfolioTotals;
@@ -178,13 +180,17 @@ function getMinMaxAvgHours(arr) {
 }
 
 function getMinMaxAvgDays(arr) {
-  let max = arr[0].value.avg || 0;
-  let min = arr[0].value.avg || 0;
-  let sum = arr[0].value.avg || 0;
-  for (let i = 1; i < arr.length; i++) {
-    if (arr[i].value.avg > max) max = arr[i].value.avg;
-    if (arr[i].value.avg < min) min = arr[i].value.avg;
-    sum = sum + arr[i].value.avg;
+  try {
+    let max = arr[0].value.avg || 0;
+    let min = arr[0].value.avg || 0;
+    let sum = arr[0].value.avg || 0;
+    for (let i = 1; i < arr.length; i++) {
+      if (arr[i].value.avg > max) max = arr[i].value.avg;
+      if (arr[i].value.avg < min) min = arr[i].value.avg;
+      sum = sum + arr[i].value.avg;
+    }
+    return { min, max, avg: sum / arr.length }
+  } catch(e) {
+    return { min: 0, max: 0, avg: 0 }
   }
-  return { min, max, avg: sum / arr.length }
 }
