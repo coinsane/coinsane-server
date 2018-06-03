@@ -38,13 +38,15 @@ function getAllPortfoliosTotals(coins) {
 
       const portfolioTotals = {};
       coins.forEach(coin => {
-        const amount = coin.market.symbol === 'BTC' ? coin.amount : coin.market.prices.BTC.price * coin.amount;
-        if (!portfolioTotals[coin.portfolio]) {
-          portfolioTotals[coin.portfolio] = {};
-          portfolioTotals[coin.portfolio].amount = amount;
-          portfolioTotals[coin.portfolio].owner = coin.owner;
-        } else {
-          portfolioTotals[coin.portfolio].amount += amount;
+        if (coin.market) {
+          const amount = coin.market.symbol === 'BTC' ? coin.amount : coin.market.prices.BTC.price * coin.amount;
+          if (!portfolioTotals[coin.portfolio]) {
+            portfolioTotals[coin.portfolio] = {};
+            portfolioTotals[coin.portfolio].amount = amount;
+            portfolioTotals[coin.portfolio].owner = coin.owner;
+          } else {
+            portfolioTotals[coin.portfolio].amount += amount;
+          }
         }
       });
       return portfolioTotals;
