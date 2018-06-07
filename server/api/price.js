@@ -2,7 +2,7 @@ const config = require('../../config');
 const { price, pricefull } = require('../../lib/services/cryptocompare');
 
 function getPrice(req, res, next) {
-  const { fsym, tsyms, nocache } = req.query;
+  const { fsym, tsyms, date, nocache } = req.query;
 
   if (!(fsym && tsyms)) {
     return res.send({
@@ -11,7 +11,13 @@ function getPrice(req, res, next) {
     });
   }
 
-  price(fsym, tsyms, { nocache })
+  const options = { nocache };
+
+  try {
+    if (date) options.ts = parseInt(new Date(date).getTime()/1000);
+  } catch(e) {}
+
+  price(fsym, tsyms, options)
     .then(data => res.send(data));
 }
 

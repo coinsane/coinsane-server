@@ -1,12 +1,12 @@
 const config = require('../config');
-const { mongo } = require('../lib/db');
+const { db } = require('../lib/db');
 const rp = require('request-promise-native');
 
 const Bottleneck = require('bottleneck');
 const limiter = new Bottleneck(config.cryptocompare.limiter.prices);
 const fetchLimit = limiter.wrap(rp);
 
-const { MarketModel } = mongo();
+const { MarketModel } = db();
 
 
 // TODO fetch fiat price (Currency)

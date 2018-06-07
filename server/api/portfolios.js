@@ -1,8 +1,8 @@
-const { mongo } = require('../../lib/db');
+const { db } = require('../../lib/db');
 const { getTotalsPct } = require('../../lib/services/totals');
 const { price } = require('../../lib/services/cryptocompare');
 
-const { PortfolioModel } = mongo();
+const { PortfolioModel } = db();
 
 const BTC = 'BTC';
 
@@ -95,12 +95,12 @@ const _getPortfolios = (portfolioQuery) => {
          path: 'coins',
          model: 'Coin',
          match: { isActive: true },
-         select: 'amount',
+         select: 'amount transactions',
          populate: [
            {
              path: 'market',
              model: 'Market',
-             select: 'name symbol imageUrl prices.BTC.price prices.USD.price prices.RUB.price prices.BTC.changePctDay prices.USD.changePctDay prices.RUB.changePctDay prices.BTC.marketCap prices.BTC.totalVolume24HTo prices.BTC.supply prices.BTC.low24H  prices.BTC.high24H prices.USD.low24H  prices.USD.high24H',
+             select: 'name symbol imageUrl prices',
            },
          ],
        },

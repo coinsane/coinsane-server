@@ -1,7 +1,7 @@
 const config = require('../../config');
 const { getCacheKey, cacheGet, cacheSet } = require('../../lib/cache');
-const { mongo } = require('../../lib/db');
-const { UserModel } = mongo();
+const { db } = require('../../lib/db');
+const { UserModel } = db();
 
 
 function getSettings(req, res) {

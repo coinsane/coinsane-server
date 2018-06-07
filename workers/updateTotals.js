@@ -1,7 +1,7 @@
 const config = require('../config');
-const { mongo } = require('../lib/db');
+const { db } = require('../lib/db');
 
-const { CoinModel, TotalModel } = mongo();
+const { CoinModel, TotalModel } = db();
 
 module.exports = updatePortfoliosTotals;
 

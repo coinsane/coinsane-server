@@ -1,5 +1,3 @@
-const config = require('../../config');
-const { mongo } = require('../../lib/db');
 const { getTotals, getLastTotal, getTotalsPct } = require('../../lib/services/totals');
 
 function apiTotals(req, res, next) {

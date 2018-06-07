@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
 
 const config = require('../../config');
-const { mongo } = require('../../lib/db');
-const { UserModel, PortfolioModel, CurrencyModel, MarketModel } = mongo();
+const { db } = require('../../lib/db');
+const { UserModel, PortfolioModel, CurrencyModel, MarketModel } = db();
 
 function getToken(req, res) {
   const token = _getToken(req);

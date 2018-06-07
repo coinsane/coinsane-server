@@ -1,5 +1,5 @@
 const config = require('../../config');
-const { mongo } = require('../../lib/db');
+const { db } = require('../../lib/db');
 const { topPairs } = require('../../lib/services/cryptocompare');
 
 const rp = require('request-promise-native');
@@ -12,7 +12,7 @@ const apiCache = redis.createClient(config.redis);
 const { promisify } = require('util');
 const apiCacheGet = promisify(apiCache.get).bind(apiCache);
 
-const { MarketModel } = mongo();
+const { MarketModel } = db();
 
 function getMarket(req, res, next) {
   const limit = req.query.limit ? parseInt(req.query.limit) : null;
@@ -31,7 +31,7 @@ function getMarket(req, res, next) {
       };
 
       return Promise.all([
-        MarketModel.find(query, 'order name symbol imageUrl prices.BTC.price prices.BTC.marketCap prices.BTC.totalVolume24HTo prices.BTC.changePct24H prices.BTC.supply prices.USD.price prices.USD.marketCap prices.USD.totalVolume24HTo prices.USD.changePct24H prices.USD.supply prices.RUB.price prices.RUB.marketCap prices.RUB.totalVolume24HTo prices.RUB.changePct24H prices.RUB.supply')
+        MarketModel.find(query, 'order name symbol imageUrl prices')
           .sort('-prices.BTC.marketCap')
           .skip(skip).limit(limit),
         MarketModel.count(query),

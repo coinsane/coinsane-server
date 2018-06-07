@@ -1,72 +1,106 @@
-const { mongo } = require('../../lib/db');
+const { db } = require('../../lib/db');
 
-const { MarketModel, PortfolioModel, CoinModel, TransactionModel, CurrencyModel, CategoryModel } = mongo();
+const {
+  MarketModel,
+  PortfolioModel,
+  CoinModel,
+  TransactionModel,
+  CurrencyModel,
+  CategoryModel,
+  FiatModel,
+} = db();
 
 const { pricehisto } = require('../../lib/services/cryptocompare');
 
 function addCoin(req, res, next) {
   if (!(
     req.body &&
-    req.body.coin &&
     req.body.portfolio &&
-    (req.body.currency || req.body.market) &&
-    req.body.date &&
+    req.body.market &&
+    (req.body.currency || req.body.exchange) &&
+    req.body.price &&
     req.body.amount &&
-    req.body.total
+    req.body.total &&
+    req.body.date &&
+    req.body.time &&
+    req.body.type
   )) {
     return res.send({
       success: false,
       response: {
-        message: 'coin && portfolio && (currency || market) && date && amount && total params is required'
+        message: 'portfolio && market && (currency || exchange) && price && amount && total && date && time && type params is required'
       }
     });
   }
 
+  const type = req.body.type;
+  const isExchange = (type === 'exchange' && req.body.exchange);
+  const isCurrency = (type === 'buy' || type === 'sell') && req.body.currency;
+
   const coinData = {
     owner: req.user._id,
-    market: req.body.coin,
     portfolio: req.body.portfolio,
+    market: req.body.market,
   };
+  const pairData = { owner: req.user._id };
 
-  let currencyQuery;
-
-  if (req.body.currency) {
-    currencyQuery = CurrencyModel.findById(req.body.currency);
-  } else if (req.body.market) {
-    currencyQuery = MarketModel.findById(req.body.market);
-  }
-
-  Promise.all([
+  let allQuery = [
     CoinModel.findOne(coinData),
     PortfolioModel.findOne({ _id: coinData.portfolio }),
-    CategoryModel.findOne({ title: req.body.category, owner: req.user._id }),
-    currencyQuery,
-  ])
+    CategoryModel.findById(req.body.category),
+  ];
+
+  if (isExchange) {
+    allQuery.push(MarketModel.findById(req.body.exchange, '_id'));
+    pairData.portfolio = req.body.portfolio;
+    pairData.market = req.body.exchange;
+    allQuery.push(CoinModel.findOne(pairData, '_id amount'));
+  }
+  if (isCurrency) {
+    allQuery.push(CurrencyModel.findById(req.body.currency, '_id'));
+    pairData.currency = req.body.currency;
+    allQuery.push(FiatModel.findOne(pairData, '_id amount'));
+  }
+
+  Promise.all(allQuery)
   .then(data => {
     const coin = data[0] || new CoinModel(coinData);
     const portfolio = data[1];
     const category = data[2];
-    const currency = data[3];
+    const pairModel = data[3];
+    let pair = data[4];
+
     const transaction = {
       owner: req.user._id,
       coin: coin._id,
-      date: new Date(req.body.date),
-      buy: req.body.buy,
+      date: new Date(`${req.body.date} ${req.body.time}`),
+      type,
       amount: req.body.amount,
+      price: req.body.price,
       total: req.body.total,
       note: req.body.note,
     };
 
-    if (req.body.currency) {
-      transaction.currency = req.body.currency;
-    } else if (req.body.market) {
-      transaction.market = req.body.market;
+    if (isExchange) {
+      if (!(pair && pair._id)) pair = new CoinModel(pairData);
+      transaction.pair = pair._id;
+      transaction.exchange = pairModel;
+    }
+    if (isCurrency) {
+      if (!(pair && pair._id)) pair = new FiatModel(pairData);
+      transaction.fiat = pair._id;
+      transaction.currency = pairModel;
     }
 
     const newTransaction = new TransactionModel(transaction);
 
-    if (newTransaction.buy) coin.amount += newTransaction.amount;
-    else coin.amount -= newTransaction.amount;
+    if (newTransaction.type === 'buy' || newTransaction.type === 'exchange') {
+      coin.amount += newTransaction.amount;
+      pair.amount -= newTransaction.total;
+    } else if (newTransaction.type === 'sell') {
+      coin.amount -= newTransaction.amount;
+      pair.amount += newTransaction.total;
+    }
 
     if (!category && req.body.category) {
       const newCategory = new CategoryModel({ title: req.body.category, owner: req.user._id });
@@ -75,66 +109,87 @@ function addCoin(req, res, next) {
     }
 
     coin.transactions.push(newTransaction._id);
+    pair.transactions.push(newTransaction._id);
 
-    if (portfolio.coins.indexOf(coin._id) === -1) {
-      portfolio.coins.push(coin._id);
-    }
+    if (portfolio.coins.indexOf(coin._id) === -1) portfolio.coins.push(coin._id);
+    if (isExchange && portfolio.coins.indexOf(pair._id) === -1) portfolio.coins.push(pair._id);
 
-    Promise.all([
+    Promise
+      .all([
         coin.save(),
+        pair.save(),
         newTransaction.save(),
         portfolio.save(),
       ])
       .then(() => {
         CoinModel
-          .findOne({ _id: coin._id }, 'amount')
+          .findOne({ _id: coin._id }, 'amount portfolio')
           .populate([
             {
                path: 'transactions',
                model: 'Transaction',
                match: { isActive: true },
-               select: 'date buy amount total category note',
+               select: 'date type amount total note histo pair',
                populate: [
                  {
                    path: 'market',
                    model: 'Market',
-                   select: 'symbol prices.BTC.price',
+                   select: 'symbol code prices',
                  },
                  {
                    path: 'currency',
                    model: 'Currency',
-                   select: 'symbol code prices.BTC.price',
+                   select: 'symbol name code prices',
+                 },
+                 {
+                   path: 'exchange',
+                   model: 'Market',
+                   select: 'symbol',
                  },
                  {
                    path: 'category',
                    model: 'Category',
-                   select: 'title',
+                   select: 'title color',
                  },
                ],
              },
              {
                path: 'market',
                model: 'Market',
-               select: 'imageUrl name order symbol prices.BTC.price',
+               select: 'imageUrl name order symbol prices',
              },
           ])
           .then(coinData => {
             Promise
               .all(coinData.transactions.map(transaction => {
-                const fsym = transaction.currency.code || transaction.market.symbol;
-                const tsym = 'BTC,USD,RUB';
-                const ts = new Date(transaction.date).getTime();
-                return pricehisto(fsym, tsym, ts)
-                  .then(histo => {
-                    transaction.histo = histo[fsym];
-                    return transaction;
-                  });
+                if (!transaction.histo) {
+                  const fsym = isCurrency ? transaction.currency.code : transaction.exchange.symbol;
+                  const tsym = 'BTC,USD,RUB';
+                  const ts = new Date(transaction.date).getTime();
+                  return pricehisto(fsym, tsym, ts)
+                    .then(histo => {
+                      transaction.histo = histo[fsym];
+                      transaction.save();
+                      return transaction;
+                    });
+                } else {
+                  return Promise.resolve(transaction);
+                }
+              }))
+              .then(transactions => transactions.map(transaction => {
+                if (transaction.pair && transaction.pair.equals(coin._id)) {
+                  // this is paired coin transaction, an exchange
+                  transaction.amount = transaction.amount * -1;
+                  transaction.total = transaction.total * -1;
+                }
+                return transaction;
               }))
               .then(transactions => {
+                const { _id, amount, market } = coinData;
                 res.send({
                   success: true,
                   response: {
-                    coin: { ...coinData, transactions },
+                    coin: { _id, amount, market, transactions },
                   }
                 });
               });
@@ -166,17 +221,17 @@ function getCoin(req, res, next) {
          path: 'transactions',
          model: 'Transaction',
          match: { isActive: true },
-         select: 'date buy amount total category note',
+         select: 'date type amount total category note',
          populate: [
            {
              path: 'market',
              model: 'Market',
-             select: 'symbol prices.BTC.price',
+             select: 'symbol prices',
            },
            {
              path: 'currency',
              model: 'Currency',
-             select: 'symbol code prices.BTC.price',
+             select: 'symbol code prices',
            },
            {
              path: 'category',
@@ -188,7 +243,7 @@ function getCoin(req, res, next) {
        {
          path: 'market',
          model: 'Market',
-         select: 'imageUrl name order symbol prices.BTC.price prices.BTC.marketCap prices.BTC.totalVolume24HTo prices.BTC.supply',
+         select: 'imageUrl name order symbol prices',
        },
     ])
     .then(coins => {

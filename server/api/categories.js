@@ -1,7 +1,7 @@
 const config = require('../../config');
-const { mongo } = require('../../lib/db');
+const { db } = require('../../lib/db');
 
-const { CategoryModel } = mongo();
+const { CategoryModel } = db();
 
 function getCategories(req, res, next) {
   const categoryData = {

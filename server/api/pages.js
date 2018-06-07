@@ -1,6 +1,6 @@
-const { mongo } = require('../../lib/db');
+const { db } = require('../../lib/db');
 
-const { PageModel } = mongo();
+const { PageModel } = db();
 
 function getPages(req, res, next) {
   const pageData = {

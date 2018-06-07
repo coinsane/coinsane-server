@@ -1,12 +1,12 @@
 const config = require('../../config');
-const { mongo } = require('../../lib/db');
+const { db } = require('../../lib/db');
 
 const redis = require('redis');
 const apiCache = redis.createClient(config.redis);
 const { promisify } = require('util');
 const apiCacheGet = promisify(apiCache.get).bind(apiCache);
 
-const { MarketModel, CurrencyModel } = mongo();
+const { MarketModel, CurrencyModel } = db();
 
 function search(req, res, next) {
   const limit = req.query.limit ? parseInt(req.query.limit) : config.search.limit;
@@ -30,7 +30,7 @@ function search(req, res, next) {
             { name: q },
           ]
         } : {};
-        promiseQuery.push(MarketModel.find(query, 'order name symbol imageUrl prices.BTC.price prices.BTC.marketCap prices.BTC.totalVolume24HTo prices.BTC.changePct24H prices.BTC.supply prices.USD.price prices.USD.marketCap prices.USD.totalVolume24HTo prices.USD.changePct24H prices.USD.supply prices.RUB.price prices.RUB.marketCap prices.RUB.totalVolume24HTo prices.RUB.changePct24H prices.RUB.supply').skip(skip).limit(limit).sort('order'));
+        promiseQuery.push(MarketModel.find(query, 'order name symbol imageUrl prices').skip(skip).limit(limit).sort('order'));
         promiseQuery.push(MarketModel.count(query))
       }
 

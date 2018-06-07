@@ -1,8 +1,8 @@
 const config = require('../config');
-const { mongo } = require('../lib/db');
+const { db } = require('../lib/db');
 const rp = require('request-promise-native');
 
-const { MarketModel } = mongo();
+const { MarketModel } = db();
 
 function fetchMarket() {
   const uri = `${config.cryptocompare.apiUri}/data/coinlist`;

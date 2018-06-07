@@ -1,29 +1,36 @@
-const config = require('../../config');
-const { mongo } = require('../../lib/db');
+const { db } = require('../../lib/db');
 
-const { CoinModel, TransactionModel } = mongo();
+const { CoinModel, TransactionModel } = db();
 
 const { pricehisto } = require('../../lib/services/cryptocompare');
 
 function getTransactionsList(req, res, next) {
   const transactionData = {
-    coin: req.query.coinId,
     owner: req.user._id,
     isActive: true,
+    $or: [
+      { coin: req.query.coinId },
+      { pair: req.query.coinId },
+    ]
   };
 
-  TransactionModel.find(transactionData, 'date buy amount total note category')
+  TransactionModel.find(transactionData, 'date type amount total note histo pair')
     .sort('date')
     .populate([
       {
-        path: 'currency',
-        model: 'Currency',
-        select: 'symbol name code prices.BTC.price',
-      },
-      {
         path: 'market',
         model: 'Market',
-        select: 'symbol code prices.BTC.price',
+        select: 'symbol code prices',
+      },
+      {
+        path: 'currency',
+        model: 'Currency',
+        select: 'symbol name code prices',
+      },
+      {
+        path: 'exchange',
+        model: 'Market',
+        select: 'symbol',
       },
       {
         path: 'category',
@@ -36,30 +43,43 @@ function getTransactionsList(req, res, next) {
         res.send({
           success: false,
           response: {
-            message: 'transactions not found'
+            transactions: []
           }
         });
         return next();
       }
-      return Promise.all(transactions.map(transaction => {
-        console.log('transaction', transaction)
-        const fsym = transaction.currency.code || transaction.market.symbol;
-        const tsym = 'BTC,USD,RUB';
-        const ts = new Date(transaction.date).getTime();
-        return pricehisto(fsym, tsym, ts)
-          .then(histo => {
-            transaction.histo = histo[fsym];
-            return transaction;
-          });
-      }))
-      .then(transactions => {
-        res.send({
-          success: true,
-          response: {
-            transactions
+      return Promise
+        .all(transactions.map(transaction => {
+          if (!transaction.histo) {
+            const fsym = transaction.currency ? transaction.currency.code : transaction.exchange.symbol;
+            const tsym = 'BTC,USD,RUB';
+            const ts = new Date(transaction.date).getTime();
+            return pricehisto(fsym, tsym, ts)
+              .then(histo => {
+                transaction.histo = histo[fsym];
+                transaction.save();
+                return transaction;
+              });
+          } else {
+            return Promise.resolve(transaction);
           }
+        }))
+        .then(transactions => transactions.map(transaction => {
+          if (transaction.pair && transaction.pair.toString() === req.query.coinId) {
+            // this is paired coin transaction, an exchange
+            transaction.amount = transaction.amount *= -1;
+            transaction.total = transaction.total * -1;
+          }
+          return transaction;
+        }))
+        .then(transactions => {
+          res.send({
+            success: true,
+            response: {
+              transactions
+            }
+          });
         });
-      });
     });
 }
 
@@ -70,17 +90,17 @@ function getTransaction(req, res, next) {
     isActive: true,
   };
 
-  TransactionModel.findOne(transactionData, 'date buy amount total note')
+  TransactionModel.findOne(transactionData, 'date type amount total note')
     .populate([
       {
         path: 'market',
         model: 'Market',
-        select: 'symbol prices.BTC.price',
+        select: 'symbol prices',
       },
       {
         path: 'currency',
         model: 'Currency',
-        select: 'symbol code prices.BTC.price',
+        select: 'symbol code prices',
       },
       {
         path: 'category',
