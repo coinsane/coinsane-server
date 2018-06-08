@@ -54,12 +54,12 @@ function addCoin(req, res, next) {
     allQuery.push(MarketModel.findById(req.body.exchange, '_id'));
     pairData.portfolio = req.body.portfolio;
     pairData.market = req.body.exchange;
-    allQuery.push(CoinModel.findOne(pairData, '_id amount'));
+    allQuery.push(CoinModel.findOne(pairData, '_id amount transactions'));
   }
   if (isCurrency) {
     allQuery.push(CurrencyModel.findById(req.body.currency, '_id'));
     pairData.currency = req.body.currency;
-    allQuery.push(FiatModel.findOne(pairData, '_id amount'));
+    allQuery.push(FiatModel.findOne(pairData, '_id amount transactions'));
   }
 
   Promise.all(allQuery)
@@ -129,7 +129,7 @@ function addCoin(req, res, next) {
                path: 'transactions',
                model: 'Transaction',
                match: { isActive: true },
-               select: 'date type amount total note histo pair',
+               select: 'date type amount price total note histo pair coin',
                populate: [
                  {
                    path: 'market',

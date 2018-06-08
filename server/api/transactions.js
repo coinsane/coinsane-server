@@ -14,7 +14,7 @@ function getTransactionsList(req, res, next) {
     ]
   };
 
-  TransactionModel.find(transactionData, 'date type amount total note histo pair')
+  TransactionModel.find(transactionData, 'date type amount price total note histo pair coin')
     .sort('date')
     .populate([
       {
