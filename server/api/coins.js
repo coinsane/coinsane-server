@@ -82,13 +82,17 @@ function addCoin(req, res, next) {
     };
 
     if (isExchange) {
-      if (!(pair && pair._id)) pair = new CoinModel(pairData);
-      transaction.pair = pair._id;
+      if (req.body.deduct) {
+        if (!(pair && pair._id)) pair = new CoinModel(pairData);
+        transaction.pair = pair._id;
+      }
       transaction.exchange = pairModel;
     }
     if (isCurrency) {
-      if (!(pair && pair._id)) pair = new FiatModel(pairData);
-      transaction.fiat = pair._id;
+      if (req.body.deduct) {
+        if (!(pair && pair._id)) pair = new FiatModel(pairData);
+        transaction.fiat = pair._id;
+      }
       transaction.currency = pairModel;
     }
 
@@ -109,19 +113,19 @@ function addCoin(req, res, next) {
     }
 
     coin.transactions.push(newTransaction._id);
-    pair.transactions.push(newTransaction._id);
+    if (req.body.deduct) pair.transactions.push(newTransaction._id);
 
     if (portfolio.coins.indexOf(coin._id) === -1) portfolio.coins.push(coin._id);
-    if (isExchange && portfolio.coins.indexOf(pair._id) === -1) portfolio.coins.push(pair._id);
+    if (isExchange && portfolio.coins.indexOf(pair._id) === -1 && req.body.deduct) portfolio.coins.push(pair._id);
 
     Promise
       .all([
         coin.save(),
-        pair.save(),
         newTransaction.save(),
         portfolio.save(),
       ])
       .then(() => {
+        if (req.body.deduct) pair.save();
         CoinModel
           .findOne({ _id: coin._id }, 'amount portfolio')
           .populate([

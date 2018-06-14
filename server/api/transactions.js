@@ -1,6 +1,6 @@
 const { db } = require('../../lib/db');
 
-const { CoinModel, TransactionModel } = db();
+const { CoinModel, TransactionModel, FiatModel } = db();
 
 const { pricehisto } = require('../../lib/services/cryptocompare');
 
@@ -149,7 +149,8 @@ function delTransaction(req, res, next) {
 
   const query = {
     _id: req.body.transactionId,
-    owner: req.user._id
+    owner: req.user._id,
+    isActive: true,
   };
 
   TransactionModel
@@ -165,6 +166,51 @@ function delTransaction(req, res, next) {
         return next();
       }
 
+      const removeFromTransactions = (coin) => {
+        let amount = 0;
+        let coinTransactions = [];
+        coin.transactions.forEach(item => {
+          if (!item._id.equals(transaction._id)) {
+            coinTransactions.push(item._id);
+            amount += item.amount;
+          }
+        });
+
+        if (coin.amount !== amount) {
+          coin.amount = amount;
+          coin.transactions = coinTransactions;
+          coin.save();
+        }
+      };
+
+      const populate = [{
+        path: 'transactions',
+        model: 'Transaction',
+        match: { isActive: true },
+        select: '_id amount',
+      }];
+
+      // Remove from Coin
+      if (transaction.coin) {
+        CoinModel.findById(transaction.coin, 'amount')
+          .populate(populate)
+          .then(removeFromTransactions);
+      }
+
+      // Remove from Pair
+      if (transaction.pair) {
+        CoinModel.findById(transaction.pair, 'amount')
+          .populate(populate)
+          .then(removeFromTransactions);
+      }
+
+      // Remove from Fiat
+      if (transaction.fiat) {
+        FiatModel.findById(transaction.fiat, 'amount')
+          .populate(populate)
+          .then(removeFromTransactions);
+      }
+
       transaction.isActive = false;
 
       CoinModel.findById(transaction.coin)
@@ -177,9 +223,7 @@ function delTransaction(req, res, next) {
         .then(() => {
           return res.send({
             success: true,
-            response: {
-              transactionId: transaction._id
-            }
+            response: { transaction },
           });
         });
     })

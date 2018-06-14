@@ -1,6 +1,7 @@
-const config = require('../config');
 const restify = require('restify');
+const serveStatic = require('serve-static-restify');
 
+const config = require('../config');
 const { checkAuth, getToken, getUser } = require('./api/auth');
 const { apiHisto, apiHistoPrice } = require('./api/histo');
 const apiLimits = require('./api/limits');
@@ -9,7 +10,7 @@ const { postPortfolios, getPortfolios, updatePortfolios, delPortfolios } = requi
 const { addCoin, getCoin, updateCoin, delCoin } = require('./api/coins');
 const { getTransactionsList, getTransaction, updateTransaction, delTransaction } = require('./api/transactions');
 const { search } = require('./api/search');
-const { getMarket, getMarketCap, getMarketList } = require('./api/market');
+const { getMarket, getMarketCap, getMarketExchanges } = require('./api/market');
 const { getPrice, getPriceFull } = require('./api/price');
 const { getCategories, updateCategory, delCategory } = require('./api/categories');
 const { getSettings } = require('./api/settings');
@@ -30,6 +31,13 @@ function startServer() {
   //   next();
   // });
 
+  // server.pre(serveStatic('static/onboard', {'onboard': ['screen1.png', 'screen2.png']}));
+
+  server.get('/img/([@a-z0-9]+[.]png)', restify.plugins.serveStatic({
+    directory: './server/static',
+    default: 'screen.png'
+  }));
+
   server.get('/auth/getToken', getToken);
   server.use(checkAuth);
 
@@ -37,8 +45,8 @@ function startServer() {
   server.use(restify.plugins.bodyParser());
 
   server.use((req,res,next) => {
-    if (req.query) console.log('req.query', req.query)
-    if (req.body) console.log('req.body', req.body)
+    if (req.query) console.log('req.query', req.query);
+    if (req.body) console.log('req.body', req.body);
     next();
   });
 
@@ -67,7 +75,7 @@ function startServer() {
 
   server.get('/market', getMarket);
   server.get('/market/cap', getMarketCap);
-  server.get('/market/list', getMarketList);
+  server.get('/market/exchanges', getMarketExchanges);
 
   server.get('/price', getPrice);
   server.get('/price/full', getPriceFull);

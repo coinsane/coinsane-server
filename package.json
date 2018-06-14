@@ -21,6 +21,7 @@
     "redis": "^2.8.0",
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
-    "restify": "^6.3.4"
+    "restify": "^6.3.4",
+    "serve-static-restify": "^2.1.0"
   }
 }

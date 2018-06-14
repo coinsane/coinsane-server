@@ -90,22 +90,22 @@ function getMarketCap(req, res, next) {
   });
 }
 
-function getMarketList(req, res, next) {
+function getMarketExchanges(req, res, next) {
   const { fsym, tsym, limit, nocache } = req.query;
 
   if (!(fsym)) {
     res.send({
       success: false,
-      data: 'These query params are required: fsym',
+      message: 'These query params are required: fsym',
     });
     return next();
   }
 
   return topPairs(fsym, tsym, { limit, nocache })
-    .then(data => {
+    .then(({ markets }) => {
       res.send({
         success: true,
-        data,
+        exchanges: markets,
       });
       next();
     });
@@ -114,5 +114,5 @@ function getMarketList(req, res, next) {
 module.exports = {
   getMarket,
   getMarketCap,
-  getMarketList,
+  getMarketExchanges,
 };
