@@ -1,3 +1,5 @@
+const ObjectId = require('mongoose').Types.ObjectId;
+
 const { db } = require('../../lib/db');
 
 const {
@@ -44,10 +46,14 @@ function addCoin(req, res, next) {
   };
   const pairData = { owner: req.user._id };
 
+  const categoryQuery = ObjectId.isValid(req.body.category) ?
+      { _id: ObjectId(req.body.category) } :
+      { title: req.body.category };
+
   let allQuery = [
     CoinModel.findOne(coinData),
     PortfolioModel.findOne({ _id: coinData.portfolio }),
-    CategoryModel.findById(req.body.category),
+    CategoryModel.findOne(categoryQuery),
   ];
 
   if (isExchange) {
@@ -100,10 +106,10 @@ function addCoin(req, res, next) {
 
     if (newTransaction.type === 'buy' || newTransaction.type === 'exchange') {
       coin.amount += newTransaction.amount;
-      pair.amount -= newTransaction.total;
+      if (pair) pair.amount -= newTransaction.total;
     } else if (newTransaction.type === 'sell') {
       coin.amount -= newTransaction.amount;
-      pair.amount += newTransaction.total;
+      if (pair) pair.amount += newTransaction.total;
     }
 
     if (!category && req.body.category) {
@@ -113,10 +119,10 @@ function addCoin(req, res, next) {
     }
 
     coin.transactions.push(newTransaction._id);
-    if (req.body.deduct) pair.transactions.push(newTransaction._id);
+    if (req.body.deduct && pair) pair.transactions.push(newTransaction._id);
 
     if (portfolio.coins.indexOf(coin._id) === -1) portfolio.coins.push(coin._id);
-    if (isExchange && portfolio.coins.indexOf(pair._id) === -1 && req.body.deduct) portfolio.coins.push(pair._id);
+    if (pair && isExchange && portfolio.coins.indexOf(pair._id) === -1 && req.body.deduct) portfolio.coins.push(pair._id);
 
     Promise
       .all([
@@ -125,7 +131,7 @@ function addCoin(req, res, next) {
         portfolio.save(),
       ])
       .then(() => {
-        if (req.body.deduct) pair.save();
+        if (pair && req.body.deduct) pair.save();
         CoinModel
           .findOne({ _id: coin._id }, 'amount portfolio')
           .populate([
