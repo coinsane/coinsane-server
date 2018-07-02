@@ -65,10 +65,13 @@ function updateMarketRank(qs) {
       const num_cryptocurrencies = (res.metadata && res.metadata['num_cryptocurrencies']) ? res.metadata['num_cryptocurrencies'] : 0;
       if (num_cryptocurrencies > qs.start) {
         qs.start += 100;
-        updateMarketRank(qs)
+        updateMarketRank(qs);
       }
       res.data.forEach(item => {
-        MarketModel.findOne({ symbol: item.symbol })
+        let symbol = item.symbol;
+        // exceptions
+        if (symbol === 'MIOTA') symbol = 'IOT';
+        MarketModel.findOne({ symbol })
           .then(market => {
             if (market) {
               market.rank = item.rank;
@@ -76,7 +79,8 @@ function updateMarketRank(qs) {
             }
           });
       });
-    });
+    })
+  .catch(() => {});
 }
 
 module.exports = fetchMarket;

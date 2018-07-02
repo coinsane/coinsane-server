@@ -28,9 +28,12 @@ function search(req, res, next) {
           $or: [
             { symbol: q },
             { name: q },
-          ]
-        } : {};
-        promiseQuery.push(MarketModel.find(query, 'order name symbol imageUrl prices').skip(skip).limit(limit).sort('order'));
+          ],
+          rank: { $exists: true },
+        } : {
+          rank: { $exists: true },
+        };
+        promiseQuery.push(MarketModel.find(query, 'rank order name symbol imageUrl prices').skip(skip).limit(limit).sort('rank'));
         promiseQuery.push(MarketModel.count(query))
       }
 
