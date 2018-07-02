@@ -67,9 +67,9 @@ function getMarketCap(req, res, next) {
         const qs = { convert: req.query.convert };
         return fetchLimit({ uri, qs, json: true })
           .then(data => {
-            const symbol = req.query.convert ? req.query.convert.toLowerCase() : null;
-            const total = symbol && data[`total_market_cap_${symbol}`] ? data[`total_market_cap_${symbol}`] : 0;
-            const volume = symbol && data[`total_24h_volume_${symbol}`] ? data[`total_24h_volume_${symbol}`] : 0;
+            const symbol = req.query.convert ? req.query.convert : 'USD';
+            const total = data.quotes[symbol].total_market_cap || 0;
+            const volume = data.quotes[symbol].total_volume_24h || 0;
             return { total, volume };
           })
           .then(data => {
