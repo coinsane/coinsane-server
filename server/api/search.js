@@ -1,10 +1,6 @@
 const config = require('../../config');
 const { db } = require('../../lib/db');
-
-const redis = require('redis');
-const apiCache = redis.createClient(config.redis);
-const { promisify } = require('util');
-const apiCacheGet = promisify(apiCache.get).bind(apiCache);
+const { getCacheKey, cacheGet, cacheSet } = require('../../lib/cache');
 
 const { MarketModel, CurrencyModel } = db();
 
@@ -12,12 +8,10 @@ function search(req, res, next) {
   const limit = req.query.limit ? parseInt(req.query.limit) : config.search.limit;
   const skip = req.query.skip ? parseInt(req.query.skip) : null;
 
-  const cacheKey = `${config.env}:search:${JSON.stringify(req.query)}`;
-  return apiCacheGet(cacheKey)
+  const cacheKey = getCacheKey('search', req.query);
+  return cacheGet(cacheKey)
     .then(cached => {
-      // if (cached) {
-      //   return JSON.parse(cached);
-      // }
+      if (cached) return JSON.parse(cached);
 
       const q = req.query.q ? new RegExp(req.query.q, 'i') : null;
       const promiseQuery = [];
@@ -62,7 +56,7 @@ function search(req, res, next) {
             count = all[1];
           }
           const response = { result, count };
-          apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.search);
+          cacheSet(cacheKey, response, config.cacheTime.search);
           return response;
         })
     })

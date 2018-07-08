@@ -7,19 +7,15 @@ const Bottleneck = require('bottleneck');
 const limiter = new Bottleneck(config.cryptocompare.limiter.histo);
 const fetchLimit = limiter.wrap(rp);
 
-const redis = require('redis');
-const apiCache = redis.createClient(config.redis);
-const { promisify } = require('util');
-const apiCacheGet = promisify(apiCache.get).bind(apiCache);
-
+const { getCacheKey, cacheGet, cacheSet } = require('../../lib/cache');
 const { MarketModel } = db();
 
 function getMarket(req, res, next) {
   const limit = req.query.limit ? parseInt(req.query.limit) : null;
   const skip = req.query.skip ? parseInt(req.query.skip) : null;
 
-  const cacheKey = `${config.env}:market:${JSON.stringify(req.query)}`;
-  return apiCacheGet(cacheKey)
+  const cacheKey = getCacheKey('market', req.query);
+  return cacheGet(cacheKey)
     .then(cached => {
       if (cached) {
         return JSON.parse(cached);
@@ -38,7 +34,7 @@ function getMarket(req, res, next) {
         const result = all[0];
         const count = all[1];
         const response = { result, count, skip, limit };
-        apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.market);
+        cacheSet(cacheKey, response, config.cacheTime.market);
         return response;
       })
     })
@@ -51,10 +47,10 @@ function getMarket(req, res, next) {
 }
 
 function getMarketCap(req, res, next) {
-  const cacheKey = `${config.env}:market:cap:${JSON.stringify(req.query)}`;
+  const cacheKey = getCacheKey('market:cap', req.query);
 
   return new Promise((resolve, reject) => {
-    apiCacheGet(cacheKey)
+    cacheGet(cacheKey)
       .then(cacheValue => {
         if (cacheValue) {
           try {
@@ -77,7 +73,7 @@ function getMarketCap(req, res, next) {
               data
             };
             if (response.success) {
-              apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.marketCap);
+              cacheSet(cacheKey, response, config.cacheTime.marketCap);
             }
             resolve(response);
           });

@@ -5,11 +5,7 @@ const Bottleneck = require('bottleneck');
 const limiter = new Bottleneck(config.cryptocompare.limiter.histo);
 const fetchLimit = limiter.wrap(rp);
 
-const redis = require('redis');
-const apiCache = redis.createClient(config.redis);
-const { promisify } = require('util');
-const apiCacheGet = promisify(apiCache.get).bind(apiCache);
-
+const { getCacheKey, cacheGet, cacheSet } = require('../../lib/cache');
 const { pricehisto } = require('../../lib/services/cryptocompare');
 
 function apiHisto(req, res, next) {
@@ -74,10 +70,10 @@ function apiHisto(req, res, next) {
     e,
   };
 
-  const cacheKey = `${config.env}:histo:${JSON.stringify(req.query)}`;
+  const cacheKey = getCacheKey('histo', req.query);
 
   return new Promise((resolve, reject) => {
-    apiCacheGet(cacheKey)
+    cacheGet(cacheKey)
       .then(cacheValue => {
         if (cacheValue) {
           try {
@@ -95,9 +91,9 @@ function apiHisto(req, res, next) {
               response.data[item.time] = (item.low + item.high) / 2;
             });
             if (response.success) {
-              if (period === 'histoday') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinDay); // once in 12h
-              if (period === 'histohour') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinHour); // once in 30m
-              if (period === 'histominute') apiCache.set(cacheKey, JSON.stringify(response), 'EX', config.cacheTime.coinMinute); // once in 30s
+              if (period === 'histoday') cacheSet(cacheKey, response, config.cacheTime.coinDay); // once in 12h
+              if (period === 'histohour') cacheSet(cacheKey, response, config.cacheTime.coinHour); // once in 30m
+              if (period === 'histominute') cacheSet(cacheKey, response, config.cacheTime.coinMinute); // once in 30s
             }
             resolve(response);
           });
