@@ -15,9 +15,9 @@ function search(req, res, next) {
   const cacheKey = `${config.env}:search:${JSON.stringify(req.query)}`;
   return apiCacheGet(cacheKey)
     .then(cached => {
-      if (cached) {
-        return JSON.parse(cached);
-      }
+      // if (cached) {
+      //   return JSON.parse(cached);
+      // }
 
       const q = req.query.q ? new RegExp(req.query.q, 'i') : null;
       const promiseQuery = [];
