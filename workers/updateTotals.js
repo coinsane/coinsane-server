@@ -24,8 +24,10 @@ function updatePortfoliosTotals() {
     });
 }
 
-function getAllPortfoliosTotals(coins) {
-  return CoinModel.find({}, 'amount portfolio owner')
+function getAllPortfoliosTotals() {
+  return CoinModel.find({
+    isActive: true,
+  }, 'amount portfolio owner')
     .populate([
       {
         path: 'market',
@@ -41,9 +43,10 @@ function getAllPortfoliosTotals(coins) {
         if (coin.market) {
           const amount = coin.market.symbol === 'BTC' ? coin.amount : coin.market.prices.BTC.price * coin.amount;
           if (!portfolioTotals[coin.portfolio]) {
-            portfolioTotals[coin.portfolio] = {};
-            portfolioTotals[coin.portfolio].amount = amount;
-            portfolioTotals[coin.portfolio].owner = coin.owner;
+            portfolioTotals[coin.portfolio] = {
+              amount,
+              owner: coin.owner,
+            };
           } else {
             portfolioTotals[coin.portfolio].amount += amount;
           }
@@ -57,7 +60,7 @@ function getAllPortfoliosTotals(coins) {
 
 
 function updatePortfolioTotals(data) {
-  const { portfolio, amount, owner } = data;
+  const { portfolio, amount = 0, owner } = data;
   const time = parseInt(Date.now() / 1000) * 1000;
   const totals = {};
   let mins = [];
@@ -73,97 +76,99 @@ function updatePortfolioTotals(data) {
 
   return TotalModel.findOne({ portfolio })
     .then(portfolioTotals => {
-      const total = {
-        time,
-        value: amount || 0
-      };
-
-      if (!portfolioTotals) {
-        totals.mins = [total];
-        totals.minsCount = 1;
-        return totals;
-      }
-
-      if (portfolioTotals.mins.length > MINUTES_DAY - 1) {
-        portfolioTotals.mins.splice(0, 1);
-      }
-      mins = portfolioTotals.mins.concat([], total);
-      totals.minsCount = portfolioTotals.minsCount + 1;
-      totals.mins = mins;
-
-      if (portfolioTotals.hours.length) {
-        hours = portfolioTotals.hours.concat([]);
-        totals.hoursCount = portfolioTotals.hoursCount;
-      }
-
-      if (portfolioTotals.days.length) {
-        days = portfolioTotals.days.concat([]);
-        totals.daysCount = portfolioTotals.daysCount;
-      }
-
-      if (!totals.hoursCount) totals.hoursCount = 0;
-      if (!totals.daysCount) totals.daysCount = 0;
-
-      if (totals.minsCount > MINUTES_HOUR - 1) {
-        let hoursCountFromMins = parseInt(totals.minsCount / MINUTES_HOUR);
-
-        if (hoursCountFromMins && totals.minsCount % MINUTES_HOUR === 0) {
-          if (hoursCountFromMins > HOURS_DAY) {
-            hoursCountFromMins = HOURS_DAY;
-          }
-          const minsBlock = mins.slice((hoursCountFromMins-1) * MINUTES_HOUR, hoursCountFromMins * MINUTES_HOUR);
-
-          const hour = {
+      return Promise.resolve()
+        .then(() => {
+          const total = {
             time,
-            value: getMinMaxAvgHours(minsBlock)
+            value: amount,
           };
-          hours.push(hour);
-          totals.hours = hours;
-          totals.hoursCount++;
 
-          if (totals.hoursCount > HOURS_DAY - 1) {
-            let daysCountFromHours = parseInt(totals.hoursCount / HOURS_DAY);
+          if (!portfolioTotals) {
+            totals.mins = [total];
+            totals.minsCount = 1;
+            return totals;
+          }
 
-            if (totals.daysCount > daysCountFromHours) {
-              daysCountFromHours = totals.daysCount;
-            }
+          if (portfolioTotals.mins.length > MINUTES_DAY - 1) {
+            portfolioTotals.mins.splice(0, 1);
+          }
+          mins = [...portfolioTotals.mins, total];
+          totals.minsCount = portfolioTotals.minsCount + 1;
+          totals.mins = mins;
 
-            if (daysCountFromHours && totals.hoursCount % HOURS_DAY === 0) {
-              if (daysCountFromHours > HOURS_MONTH) {
-                daysCountFromHours = HOURS_MONTH;
+          if (portfolioTotals.hours.length) {
+            hours = [...portfolioTotals.hours];
+            totals.hoursCount = portfolioTotals.hoursCount;
+          }
+
+          if (portfolioTotals.days.length) {
+            days = [...portfolioTotals.days];
+            totals.daysCount = portfolioTotals.daysCount;
+          }
+
+          if (!totals.hoursCount) totals.hoursCount = 0;
+          if (!totals.daysCount) totals.daysCount = 0;
+
+          if (totals.minsCount > MINUTES_HOUR - 1) {
+            let hoursCountFromMins = parseInt(totals.minsCount / MINUTES_HOUR);
+
+            if (hoursCountFromMins && totals.minsCount % MINUTES_HOUR === 0) {
+              if (hoursCountFromMins > HOURS_DAY) {
+                hoursCountFromMins = HOURS_DAY;
               }
-              const daysBlock = hours.slice((daysCountFromHours-1) * HOURS_DAY, daysCountFromHours * HOURS_DAY);
+              const minsBlock = mins.slice((hoursCountFromMins-1) * MINUTES_HOUR, hoursCountFromMins * MINUTES_HOUR);
 
-              const day = {
+              const hour = {
                 time,
-                value: getMinMaxAvgDays(daysBlock)
+                value: getMinMaxAvgHours(minsBlock)
               };
-              days.push(day);
-              totals.days = days;
-              totals.daysCount++;
+              hours.push(hour);
+              totals.hours = hours;
+              totals.hoursCount++;
+
+              if (totals.hoursCount > HOURS_DAY - 1) {
+                let daysCountFromHours = parseInt(totals.hoursCount / HOURS_DAY);
+
+                if (totals.daysCount > daysCountFromHours) {
+                  daysCountFromHours = totals.daysCount;
+                }
+
+                if (daysCountFromHours && totals.hoursCount % HOURS_DAY === 0) {
+                  if (daysCountFromHours > HOURS_MONTH) {
+                    daysCountFromHours = HOURS_MONTH;
+                  }
+                  const daysBlock = hours.slice((daysCountFromHours-1) * HOURS_DAY, daysCountFromHours * HOURS_DAY);
+
+                  const day = {
+                    time,
+                    value: getMinMaxAvgDays(daysBlock)
+                  };
+                  days.push(day);
+                  totals.days = days;
+                  totals.daysCount++;
+                }
+              }
+
+              // is this a bug?
+              if (hours.length > HOURS_MONTH) {
+                hours.splice(0, 1);
+              }
+
             }
           }
 
-          if (hours.length > HOURS_MONTH) {
-            hours.splice(0, 1);
-          }
-
-        }
-      }
-
-      return totals;
-    })
-    .then(totals => {
-      return TotalModel.findOne({ portfolio })
-        .then(total => {
-          if (total) {
-            Object.keys(totals).forEach(i => total[i] = totals[i]);
-            total.owner = owner;
-            return total.save().then();
+          return totals;
+        })
+        .then(totals => {
+          if (portfolioTotals) {
+            Object.keys(totals).forEach(i => portfolioTotals[i] = totals[i]);
+            if (!portfolioTotals.owner) portfolioTotals.owner = owner;
+            return portfolioTotals.save().then();
           }
           const newTotal = new TotalModel(Object.assign(totals, { portfolio, owner }));
           return newTotal.save().then();
-        }).catch(console.log);
+        })
+        .catch(console.log);
     });
 }
 
