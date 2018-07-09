@@ -1,7 +1,7 @@
 const config = require('../../config');
 const { getCacheKey, cacheGet, cacheSet } = require('../../lib/cache');
 const { db } = require('../../lib/db');
-const { UserModel } = db();
+const { UserModel, MarketModel, CurrencyModel } = db();
 
 
 function getSettings(req, res) {
@@ -24,8 +24,12 @@ function getSettings(req, res) {
           },
         ])
         .then(data => {
-          const currencies = getCurrenciesObject(data.settings.currencies);
-          cacheSet(cacheKey, { currencies }, config.cacheTime.market);
+          if (!data.settings) return _getDefaultCurrencies();
+          return data.settings.currencies;
+        })
+        .then(data => {
+          const currencies = _getCurrenciesObject(data);
+          cacheSet(cacheKey, { currencies }, config.cacheTime.settings);
           return { currencies };
         });
     })
@@ -37,7 +41,7 @@ function getSettings(req, res) {
     });
 }
 
-function getCurrenciesObject(currencies) {
+function _getCurrenciesObject(currencies) {
   const list = {};
   currencies.forEach(item => {
     if (item.market) {
@@ -64,6 +68,25 @@ function getCurrenciesObject(currencies) {
     }
   });
   return list;
+}
+
+function _getDefaultCurrencies() {
+  return Promise
+    .all([
+      MarketModel.findOne({ symbol: 'BTC' }, '_id symbol imageUrl name'),
+      CurrencyModel.findOne({ code: 'USD' }, '_id code symbol decimalDigits'),
+    ])
+    .then(res => {
+      return res.map((item, index) => {
+        const currency = { system: true };
+        if (index === 0) {
+          currency.market = item;
+        } else {
+          currency.currency = item;
+        }
+        return currency;
+      });
+    });
 }
 
 module.exports = {

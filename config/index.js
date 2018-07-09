@@ -52,6 +52,7 @@ const config = {
     price: process.env.CACHE_TIME_PRICE,
     market: process.env.CACHE_TIME_MARKET,
     marketCap: process.env.CACHE_TIME_MARKET_CAP,
+    settings: process.env.CACHE_TIME_SETTINGS,
     totals: process.env.CACHE_TIME_TOTALS,
     coinDay: process.env.CACHE_TIME_COIN_DAY,
     coinHour: process.env.CACHE_TIME_COIN_HOUR,
