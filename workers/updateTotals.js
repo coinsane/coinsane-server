@@ -10,11 +10,12 @@ function updatePortfoliosTotals() {
   return Promise.resolve()
     .then(getAllPortfoliosTotals)
     .then(portfoliosLastTotals => {
+      const time = parseInt(Date.now() / 1000) * 1000;
       const portfolioIds = Object.keys(portfoliosLastTotals);
       const updatePromises = portfolioIds.map(portfolio => {
         const amount = portfoliosLastTotals[portfolio].amount;
         const owner = portfoliosLastTotals[portfolio].owner;
-        return updatePortfolioTotals({ portfolio, amount, owner });
+        return updatePortfolioTotals({ portfolio, amount, owner, time });
       });
       return Promise.all(updatePromises);
     })
@@ -60,8 +61,7 @@ function getAllPortfoliosTotals() {
 
 
 function updatePortfolioTotals(data) {
-  const { portfolio, amount = 0, owner } = data;
-  const time = parseInt(Date.now() / 1000) * 1000;
+  const { portfolio, amount = 0, owner, time } = data;
   const totals = {};
   let mins = [];
   let hours = [];
