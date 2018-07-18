@@ -7,7 +7,7 @@ stages:
   
 build:
   variables:
-    CI_REGISTRY: '127.0.0.1:4567'
+    CI_REGISTRY: 'git.coinsane.space:4567'
   stage: build
   script:
     - export IMAGE_TAG=$(echo -en $CI_BUILD_REF_NAME | tr -c '[:alnum:]_.-' '-')
