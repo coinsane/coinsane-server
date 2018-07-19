@@ -21,4 +21,5 @@ deploy:
   stage: deploy
   script:
     - export > .env
+    - cat .env
   when: manual
