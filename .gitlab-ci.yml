@@ -4,6 +4,7 @@
 
 stages:
   - build
+  - deploy
   
 build:
   variables:
@@ -15,4 +16,9 @@ build:
     - docker build --pull -t "$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG" .
     - docker push "$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"
   when: manual
-  allow_failure: true
+
+deploy:
+  stage: deploy
+  script:
+    - export > .env
+  when: manual
