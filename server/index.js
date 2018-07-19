@@ -38,17 +38,18 @@ function startServer() {
     default: 'screen.png'
   }));
 
+  server.use(restify.plugins.queryParser());
+
   server.get('/auth/getToken', getToken);
   server.use(checkAuth);
 
-  server.use(restify.plugins.queryParser());
   server.use(restify.plugins.bodyParser());
 
-  server.use((req,res,next) => {
-    if (req.query) console.log('req.query', req.query);
-    if (req.body) console.log('req.body', req.body);
-    next();
-  });
+  // server.use((req,res,next) => {
+  //   if (req.query) console.log('req.query', req.query);
+  //   if (req.body) console.log('req.body', req.body);
+  //   next();
+  // });
 
   server.get('/auth/getUser', getUser);
   server.get('/histo', apiHisto);

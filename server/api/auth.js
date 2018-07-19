@@ -5,9 +5,9 @@ const { db } = require('../../lib/db');
 const { UserModel, PortfolioModel, CurrencyModel, MarketModel } = db();
 
 function getToken(req, res) {
-  const token = _getToken(req);
+  const { token, deviceId } = _getToken(req);
 
-  _getUser(token)
+  _getUser({ token, deviceId })
     .then(_createNewPortfolio)
     .then(user => {
       return res.send({
@@ -17,34 +17,17 @@ function getToken(req, res) {
         },
       })
     })
-    .catch(() => {
-      res.send({
-        success: false,
-        result: {
-          message: 'Authorization fail',
-        },
-      });
-    });
+    .catch(() => authorizationFail(res));
 }
 
 function checkAuth(req, res, next) {
-  const token = _getToken(req);
-  if (!token) return res.send({
-    success: false,
-    result: {
-      message: 'Authorization fail',
-    },
-  });
+  const { token } = _getToken(req);
+  if (!token) return authorizationFail(res);
 
   jwt.verify(token, config.authSecret, (err, user) => {
     if (err || !user) {
       req.user = undefined;
-      return res.send({
-        success: false,
-        result: {
-          message: 'Authorization fail',
-        },
-      });
+      return authorizationFail(res);
     }
     req.user = user;
     next();
@@ -61,42 +44,66 @@ function getUser(req, res, next) {
   next();
 }
 
-function _getUser(token) {
-  if (!token) return _createAnonymousUser();
-  return _getUserByToken(token);
+function _getUser({ token, deviceId }) {
+  if (!token) return _createAnonymousUser({ deviceId });
+  if (!deviceId) return Promise.reject();
+  return _getUserByToken({ token, deviceId });
 }
 
-function _createAnonymousUser() {
+function _createAnonymousUser({ deviceId }) {
   return _getDefaultCurrencies()
     .then(currencies => {
       const user = new UserModel({
         type: 'anonymous',
         settings: { currencies },
+        devices: [{ deviceId }],
       });
       return user.save().then(user => user);
     });
 }
 
-function _getUserByToken(token) {
+function _getUserByToken({ token, deviceId }) {
   return new Promise((resolve, reject) => {
     jwt.verify(token, config.authSecret, (err, decoded) => {
       if (err || !decoded) return reject(err);
       UserModel.findOne({ _id: decoded._id })
         .then(user => {
-          if (!user) return _createAnonymousUser().then(resolve);
+          if (!user) return _createAnonymousUser({ deviceId }).then(resolve);
+          _userDeviceUpdate({ user, deviceId });
           return resolve(user);
         });
     });
   });
 }
 
+function _userDeviceUpdate({ user, deviceId }) {
+  if (!user.devices || !user.devices.length) {
+    user.devices = [{ deviceId }];
+    user.save();
+  } else {
+    let isDeviceRegistered = false;
+    user.devices.forEach(device => {
+      if (device.deviceId === deviceId) isDeviceRegistered = true;
+    });
+    if (!isDeviceRegistered) {
+      user.devices = [{ deviceId }];
+      user.save();
+    }
+  }
+}
+
 function _getToken(req) {
   const authHeader = req.header('Authorization');
+  if (req.query.deviceId) return { deviceId: req.query.deviceId };
   if (!authHeader || authHeader.indexOf(config.appName) === -1) return '';
 
   const authParams = authHeader.split(' ');
-  const token = authParams.length > 1 ? authParams[1].split('=')[1] : '';
-  return token;
+  if (authParams.length > 1) {
+    const token = authParams[1] ? authParams[1].split('=')[1] : '';
+    const deviceId = authParams[2] ? authParams[2].split('=')[1] : '';
+    return { token, deviceId };
+  }
+  return '';
 }
 
 function _createNewPortfolio(user) {
@@ -134,6 +141,15 @@ function _getDefaultCurrencies() {
         return currency;
       });
     });
+}
+
+function authorizationFail(res) {
+  return res.send({
+    success: false,
+    result: {
+      message: 'Authorization fail',
+    },
+  });
 }
 
 module.exports = {
