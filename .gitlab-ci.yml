@@ -22,5 +22,5 @@ deploy:
   script:
     - export > .env
     - scp .env ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST}:/tmp/
-    - ssh ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST} 'docker login -u "gitlab-ci-token" -p "$CI_BUILD_TOKEN" $CI_REGISTRY'
+    - ssh ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST} "docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN $CI_REGISTRY"
   when: manual
