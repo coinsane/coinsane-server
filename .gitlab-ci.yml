@@ -4,6 +4,7 @@
 
 stages:
   - build
+  - deploy
   
 build:
   variables:
@@ -15,4 +16,16 @@ build:
     - docker build --pull -t "$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG" .
     - docker push "$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"
   when: manual
-  allow_failure: true
+
+deploy:
+  stage: deploy
+  script:
+    - export IMAGE_TAG=$(echo -en $CI_BUILD_REF_NAME | tr -c '[:alnum:]_.-' '-')
+    - export | sed -e 's/^declare \-x //' -e 's/"//g' > .env
+    - scp .env ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST}:/tmp/
+    - ssh ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST} '
+            docker login -u '"gitlab-ci-token"' -p '"$CI_BUILD_TOKEN"' '"$CI_REGISTRY"' ;
+            docker pull '"$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"' ;
+            docker run -d -p 8080:8080 --env-file /tmp/.env '"$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"'
+        '
+  when: manual
