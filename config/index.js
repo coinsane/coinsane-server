@@ -28,7 +28,7 @@ const config = {
   mongo: {
     uri: process.env.MONGODB_URI,
     options: {
-      keepAlive: 300000,
+      keepAlive: 1,
       connectTimeoutMS: 30000,
     }
   },
