@@ -30,3 +30,19 @@ deploy:
             bash /tmp/deploy.sh '"$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"'
         '
   when: manual
+  
+deploy_worker:
+  variables:
+    CONTAINER_NAME: worker
+  stage: deploy
+  script:
+    - export IMAGE_TAG=$(echo -en $CI_BUILD_REF_NAME | tr -c '[:alnum:]_.-' '-')
+    - export | sed -e 's/^declare \-x //' -e 's/"//g' > .env
+    - scp .env ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST}:/tmp/
+    - ssh ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST} '
+            docker login -u '"gitlab-ci-token"' -p '"$CI_BUILD_TOKEN"' '"$CI_REGISTRY"' ;
+            docker pull '"$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"' ;
+            docker stop $CONTAINER_NAME ;
+            docker run --rm -d -p 8080:8080 --name $CONTAINER_NAME --env-file /tmp/.env '"$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"'
+        '
+  when: manual
