@@ -23,9 +23,10 @@ deploy:
     - export IMAGE_TAG=$(echo -en $CI_BUILD_REF_NAME | tr -c '[:alnum:]_.-' '-')
     - export | sed -e 's/^declare \-x //' -e 's/"//g' > .env
     - scp .env ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST}:/tmp/
+    - scp deploy.sh ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST}:/tmp/
     - ssh ${DEPLOYMENT_SERVER_USER}@${DEPLOYMENT_SERVER_HOST} '
             docker login -u '"gitlab-ci-token"' -p '"$CI_BUILD_TOKEN"' '"$CI_REGISTRY"' ;
             docker pull '"$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"' ;
-            bash -x /root/deploy.sh '"$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"'
+            bash /tmp/deploy.sh '"$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"'
         '
   when: manual
