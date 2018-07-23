@@ -20,7 +20,7 @@ HTTP_CODE="404"
 function start_container {
 	local port=$1
 
-	docker run -d -p $port:$int_port --env-file /tmp/.env --name "${container_tmpl}${port}" "$docker_image"
+	docker run -d -p $port:$int_port --restart always --env-file /tmp/.env --name "${container_tmpl}${port}" "$docker_image"
 	sleep 2
 	CODE=$(curl --fail --silent --max-time 2 --write-out "%{http_code}" http://127.0.0.1:$port/ || true)
 	if [ $CODE == $HTTP_CODE ]; then
