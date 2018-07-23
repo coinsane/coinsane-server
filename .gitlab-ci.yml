@@ -17,7 +17,7 @@ build:
     - docker push "$CI_REGISTRY/$CI_PROJECT_PATH:$IMAGE_TAG"
   when: manual
 
-deploy:
+deploy_backend:
   stage: deploy
   script:
     - export IMAGE_TAG=$(echo -en $CI_BUILD_REF_NAME | tr -c '[:alnum:]_.-' '-')
