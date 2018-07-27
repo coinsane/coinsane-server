@@ -15,6 +15,7 @@ const { getPrice, getPriceFull } = require('./api/price');
 const { getCategories, updateCategory, delCategory } = require('./api/categories');
 const { getSettings } = require('./api/settings');
 const { getPages, getPage } = require('./api/pages');
+const { apiExchangeWallet } = require('./api/exchanges');
 
 function startServer() {
   const server = restify.createServer();
@@ -32,6 +33,8 @@ function startServer() {
   // });
 
   // server.pre(serveStatic('static/onboard', {'onboard': ['screen1.png', 'screen2.png']}));
+
+  server.get('/exchanges', apiExchangeWallet);
 
   server.get('/img/([@a-z0-9]+[.]png)', restify.plugins.serveStatic({
     directory: './server/static',
