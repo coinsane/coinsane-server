@@ -1,15 +1,19 @@
 const config = require('../../config');
 
-const rp = require('request-promise-native');
-const Bottleneck = require('bottleneck');
-const limiter = new Bottleneck(config.cryptocompare.limiter.histo);
-const fetchLimit = limiter.wrap(rp);
+const { db } = require('../../lib/db');
 
-const NodeBittrexApi = require('node.bittrex.api')
+const { ProviderModel } = db();
 
-const { getCacheKey, cacheGet, cacheSet } = require('../../lib/cache');
+function getExchanges(req, res, next) {
 
-function apiExchangeWallet(req, res, next) {
+  return ProviderModel.find({ isActive: true })
+    .then(data => {
+      const response = {
+        success: true,
+        data,
+      };
+      return res.send(response);
+    });
 
   const apikey = '9284e59d4731431f8935db2afb0994c5q';
   const apisecret = '853b897a3a6b4cc8bb2989cf0276d0d6a';
@@ -211,5 +215,5 @@ function apiExchangeWallet(req, res, next) {
 }
 
 module.exports = {
-  apiExchangeWallet,
+  getExchanges,
 };
