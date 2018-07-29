@@ -1,4 +1,5 @@
 const { db } = require('../../lib/db');
+const marked = require('marked');
 
 const { PageModel } = db();
 
@@ -47,6 +48,10 @@ function getPage(req, res, next) {
           success: false,
           message: 'page not found'
         });
+      }
+      if (req.params.type === 'marked') {
+        res.write(marked(data.content));
+        return res.end();
       }
       res.send({
         success: true,

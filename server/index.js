@@ -40,6 +40,8 @@ function startServer() {
 
   server.use(restify.plugins.queryParser());
 
+  server.get('/pages/:name/:type', getPage);
+
   server.get('/auth/getToken', getToken);
   server.use(checkAuth);
 
@@ -88,7 +90,7 @@ function startServer() {
   server.get('/settings', getSettings);
 
   server.get('/pages/', getPages);
-  server.get('/pages/:name', getPage);
+  // server.get('/pages/:name', getPage);
 
   server.listen(config.port, () => {
     console.log('%s listening at %s', server.name, server.url);
