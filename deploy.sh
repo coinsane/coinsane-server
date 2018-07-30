@@ -32,6 +32,9 @@ function start_container {
 			echo "Something goes wrong."
 			exit 1
 		fi
+	else
+        echo "Something goes wrong."
+        exit 1
 	fi
 }
 
