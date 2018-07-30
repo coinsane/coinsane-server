@@ -19,7 +19,7 @@ build:
 
 deploy_backend:
   variables:
-    SSH_OPTIONS="-o StrictHostKeyChecking=no"
+    SSH_OPTIONS: "-o StrictHostKeyChecking=no"
   stage: deploy
   script:
     - export IMAGE_TAG=$(echo -en $CI_BUILD_REF_NAME | tr -c '[:alnum:]_.-' '-')
