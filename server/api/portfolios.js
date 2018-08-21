@@ -47,26 +47,26 @@ function postPortfolios(req, res) {
             key,
             secret,
             provider,
+            isActive: true,
           };
           return ServiceModel.count(serviceQuery).then(count => {
             if (count) {
-              reject('Already exists');
+              return reject('Already connected');
             }
-            // TODO check is connectable? get coins
             return getCoins({ owner, portfolio, provider, key, secret })
               .then(coins => {
-                console.log('coins', coins);
                 if (coins) {
                   const service = new ServiceModel(serviceQuery);
-                  console.log('service', service);
+                  service.portfolio = portfolio._id;
                   service.save();
                   portfolio.service = service._id;
                   portfolio.coins = coins;
                 }
-                console.log('portfolio', portfolio);
                 return resolve(portfolio);
               })
-              .catch(reject)
+              .catch(() => {
+                reject('Can\'t connect to you account. Check your API key/secret');
+              })
           });
         } else {
           reject('Wrong provider');
@@ -83,9 +83,7 @@ function postPortfolios(req, res) {
         .then(portfolio => {
           return res.send({
             success: true,
-            response: {
-              portfolio: portfolio,
-            },
+            response: { portfolio },
           });
         });
     })
@@ -271,6 +269,14 @@ function delPortfolios(req, res, next) {
 
       portfolio.isActive = false;
 
+      if (portfolio.service) {
+        ServiceModel.findById(portfolio.service)
+          .then(service => {
+            service.isActive = false;
+            service.save();
+          });
+      }
+
       return portfolio.save()
         .then(() => {
           return res.send({
@@ -279,7 +285,7 @@ function delPortfolios(req, res, next) {
               portfolioId: portfolio._id,
             },
           });
-        })
+        });
     })
     .catch(err => {
       res.send({
