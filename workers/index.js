@@ -6,10 +6,17 @@ mongooseConnect(startWorkers);
 const updateTotals = require('./updateTotals');
 const fetchPrices = require('./fetchPrices');
 const fetchCoins = require('./fetchCoins');
+const updateExchanges = require('./updateExchanges');
 
 const cron = require('cron');
 
 function startWorkers() {
+  new cron.CronJob({
+    cronTime: '0 */1 * * * *',
+    onTick: () => updateExchanges(),
+    start: true,
+    timeZone: 'Europe/Moscow'
+  });
   new cron.CronJob({
     cronTime: '0 */1 * * * *',
     onTick: () => {
