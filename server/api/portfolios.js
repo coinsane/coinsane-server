@@ -1,31 +1,96 @@
 const { db } = require('../../lib/db');
 const { getTotalsPct } = require('../../lib/services/totals');
+const { getCoins } = require('../../lib/services/exchanges');
 const { price } = require('../../lib/services/cryptocompare');
 
-const { PortfolioModel } = db();
+const { PortfolioModel, ServiceModel, ProviderModel } = db();
 
 const BTC = 'BTC';
 
 function postPortfolios(req, res) {
-  const newPortfolio = new PortfolioModel({
-    owner: req.user._id,
-    ...req.body,
+  /*
+  // populate providers
+  ProviderModel.find({}).then(providers => {
+    if (!providers.length) {
+      const provider = new ProviderModel({ name: 'Bittrex' });
+      provider.save(console.log);
+    }
   });
-  return newPortfolio.save()
-    .then(portfolio => {
-      return res.send({
-        success: true,
-        response: {
-          portfolio: portfolio,
-        },
+  */
+
+  const {
+    title,
+    inTotal,
+    provider,
+    key,
+    secret,
+  } = req.body;
+
+  const body = {
+    title,
+    inTotal,
+  };
+
+  const owner = req.user;
+
+  return new Promise((resolve, reject) => {
+    const portfolio = new PortfolioModel({
+      owner,
+      ...body,
+    });
+    if (provider && key && secret) {
+      ProviderModel.findOne({ _id: provider, isActive: true }).then(serviceProvider => {
+        if (serviceProvider) {
+          // add service
+          const serviceQuery = {
+            owner,
+            key,
+            secret,
+            provider,
+            isActive: true,
+          };
+          return ServiceModel.count(serviceQuery).then(count => {
+            if (count) {
+              return reject('Already connected');
+            }
+            return getCoins({ owner, portfolio, provider, key, secret })
+              .then(coins => {
+                if (coins) {
+                  const service = new ServiceModel(serviceQuery);
+                  service.portfolio = portfolio._id;
+                  service.save();
+                  portfolio.service = service._id;
+                  portfolio.coins = coins;
+                }
+                return resolve(portfolio);
+              })
+              .catch(() => {
+                reject('Can\'t connect to you account. Check your API key/secret');
+              })
+          });
+        } else {
+          reject('Wrong provider');
+        }
       });
+    } else {
+      resolve(portfolio);
+    }
+  })
+    .then(newPortfolio => {
+      console.log('newPortfolio', newPortfolio);
+
+      return newPortfolio.save()
+        .then(portfolio => {
+          return res.send({
+            success: true,
+            response: { portfolio },
+          });
+        });
     })
-    .catch(err => {
+    .catch(message => {
       return res.send({
         success: false,
-        response: {
-          message: err,
-        },
+        response: { message },
       });
     });
 }
@@ -101,6 +166,19 @@ const _getPortfolios = (portfolioQuery) => {
              path: 'market',
              model: 'Market',
              select: 'name symbol imageUrl prices',
+           },
+         ],
+       },
+      {
+         path: 'service',
+         model: 'Service',
+         match: { isActive: true },
+         select: 'provider',
+         populate: [
+           {
+             path: 'provider',
+             model: 'Provider',
+             select: 'name description',
            },
          ],
        },
@@ -191,6 +269,14 @@ function delPortfolios(req, res, next) {
 
       portfolio.isActive = false;
 
+      if (portfolio.service) {
+        ServiceModel.findById(portfolio.service)
+          .then(service => {
+            service.isActive = false;
+            service.save();
+          });
+      }
+
       return portfolio.save()
         .then(() => {
           return res.send({
@@ -199,7 +285,7 @@ function delPortfolios(req, res, next) {
               portfolioId: portfolio._id,
             },
           });
-        })
+        });
     })
     .catch(err => {
       res.send({

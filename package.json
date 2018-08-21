@@ -19,6 +19,8 @@
     "marked": "^0.4.0",
     "mongodb": "^3.0.2",
     "mongoose": "^5.0.6",
+    "node-binance-api": "^0.8.1",
+    "node.bittrex.api": "^1.0.0",
     "redis": "^2.8.0",
     "request": "^2.83.0",
     "request-promise-native": "^1.0.5",

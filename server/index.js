@@ -15,6 +15,7 @@ const { getPrice, getPriceFull } = require('./api/price');
 const { getCategories, updateCategory, delCategory } = require('./api/categories');
 const { getSettings } = require('./api/settings');
 const { getPages, getPage } = require('./api/pages');
+const { getExchanges } = require('./api/exchanges');
 
 function startServer() {
   const server = restify.createServer();
@@ -91,6 +92,8 @@ function startServer() {
 
   server.get('/pages/', getPages);
   // server.get('/pages/:name', getPage);
+
+  server.get('/exchanges', getExchanges);
 
   server.listen(config.port, () => {
     console.log('%s listening at %s', server.name, server.url);
