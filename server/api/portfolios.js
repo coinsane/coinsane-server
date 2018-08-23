@@ -3,7 +3,7 @@ const { getTotalsPct } = require('../../lib/services/totals');
 const { getCoins } = require('../../lib/services/exchanges');
 const { price } = require('../../lib/services/cryptocompare');
 
-const { PortfolioModel, ServiceModel, ProviderModel } = db();
+const { PortfolioModel, ServiceModel, ProviderModel, UserModel } = db();
 
 const BTC = 'BTC';
 
@@ -111,52 +111,128 @@ function getPortfolios(req, res) {
 
   // TODO update response with a currency
 
-  _getPortfolios(portfolioQuery)
-    .then(portfolios => {
-      return Promise.all(portfolios.map(portfolio => {
-        return Promise.all([
-          getTotalsPct(owner, portfolio._id, range),
-          _getLastTotal(portfolio.coins, symbol),
-        ])
-        .then(all => {
-          portfolio.changePct = all[0];
-          portfolio.amount = all[1].amount;
-          portfolio.amounts = all[1].amounts;
-          return portfolio;
+  _getUserCurrencies(owner)
+    .then(currencies => {
+      _getPortfolios(portfolioQuery)
+        .then(portfolios => {
+          return Promise.all(portfolios.map(portfolio => {
+            return Promise.all([
+              getTotalsPct(owner, portfolio._id, range),
+              _getLastTotal(portfolio.coins, symbol, currencies),
+            ])
+              .then(all => {
+                portfolio.changePct = all[0];
+                portfolio.amount = all[1].amount;
+                portfolio.amounts = all[1].amounts;
+                console.log('portfolio.amounts', portfolio.amounts);
+                return portfolio;
+              });
+          }));
+        })
+        .then(portfolios => {
+          return res.send({
+            success: true,
+            response: {
+              portfolios,
+            },
+          });
+        })
+        .catch(err => {
+          return res.send({
+            success: false,
+            response: {
+              message: err,
+            },
+          });
         });
-      }));
-    })
-    .then(portfolios => {
-      return res.send({
-        success: true,
-        response: {
-          portfolios,
-        },
-      });
-    })
-    .catch(err => {
-      return res.send({
-        success: false,
-        response: {
-          message: err,
-        },
-      });
     });
 }
 
-const _getLastTotal = (coins, symbol) => {
-  // console.log('_getLastTotal', symbol, coins);
-  let amount = 0;
-  const amounts = {};
-  coins.forEach(coin => {
-    Object.keys(coin.market.prices).forEach(key => {
-      if (!amounts[key]) amounts[key] = 0;
-      amounts[key] += coin.symbol === key ? coin.amount : coin.amount * coin.market.prices[key].price;
+const _getUserCurrencies = (user_id) => {
+  return UserModel.findById(user_id, 'settings')
+    .populate([
+      {
+        path: 'settings.currencies.market',
+        model: 'Market',
+        select: '_id symbol imageUrl name',
+      },
+      {
+        path: 'settings.currencies.currency',
+        model: 'Currency',
+        select: '_id code symbol decimalDigits',
+      },
+    ])
+    .then(data => {
+      return data.settings.currencies;
     });
-    amount += coin.symbol === BTC ? coin.amount : coin.amount * coin.market.prices.BTC.price;
-  });
-  if (symbol === BTC) return Promise.resolve({ amount, amounts });
-  return price(BTC, symbol).then(data => ({ amount: data.data[symbol] * amount, amounts }));
+};
+
+const _getLastTotal = (coins, symbol, currencies) => {
+  try {
+    let amount = 0;
+    const amounts = {};
+
+    const currencySymbols = currencies.map(({ market, currency }) => {
+      const currencySymbol = market ? market.symbol : currency.code;
+      amounts[currencySymbol] = 0;
+      return currencySymbol;
+    });
+
+    const coinAmountsPromises = [];
+
+    coins.forEach(coin => {
+      // old
+      if (coin.market) {
+        amount += coin.market.symbol === BTC ? coin.amount : coin.amount * coin.market.prices.BTC.price;
+      }
+
+      coinAmountsPromises.push(new Promise(resolve => {
+        const coinPricesPromises = [];
+        currencySymbols.forEach(currencySymbol => {
+          if (coin.market) {
+            coinPricesPromises.push(getPrice(coin.amount, coin.market.symbol, currencySymbol));
+          }
+        });
+        Promise.all(coinPricesPromises)
+          .then(coinAmounts => {
+            resolve({ [coin._id]: coinAmounts });
+          });
+      }));
+    });
+
+    return Promise.all(coinAmountsPromises)
+      .then(coinPrices => {
+        coinPrices.forEach(coinPrice => {
+          // console.log('coinPrice', coinPrice);
+          const coin_id = Object.keys(coinPrice)[0];
+          // console.log('coinPrices[coin_id]', coinPrice[coin_id]);
+          coinPrice[coin_id].forEach(item => {
+            const coinSymbol = Object.keys(item)[0];
+            if (item[coinSymbol]) {
+              amounts[coinSymbol] += item[coinSymbol];
+            }
+          })
+        });
+
+        return Promise.resolve({ amount, amounts });
+      });
+
+
+    // if (symbol === BTC) return Promise.resolve({ amount, amounts });
+    // return price(BTC, symbol).then(data => ({ amount: data.data[symbol] * amount, amounts }));
+  } catch(e) {
+    return Promise.resolve({ amount: 0, amounts: {} });
+  }
+};
+
+const getPrice = (amount, fromSym, toSym) => {
+  if (fromSym === toSym) {
+    return Promise.resolve({[toSym]: amount})
+  } else {
+    return price(fromSym, toSym).then(data => {
+      return { [toSym]: data.data[toSym] * amount };
+    });
+  }
 };
 
 const _getPortfolios = (portfolioQuery) => {

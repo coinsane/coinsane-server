@@ -172,19 +172,19 @@ function addCoin(req, res, next) {
           .then(coinData => {
             Promise
               .all(coinData.transactions.map(transaction => {
-                if (!transaction.histo) {
-                  const fsym = isCurrency ? transaction.currency.code : transaction.exchange.symbol;
-                  const tsym = 'BTC,USD,RUB';
-                  const ts = new Date(transaction.date).getTime();
-                  return pricehisto(fsym, tsym, ts)
-                    .then(histo => {
-                      transaction.histo = histo[fsym];
-                      transaction.save();
-                      return transaction;
-                    });
-                } else {
+                // if (!transaction.histo) {
+                //   const fsym = isCurrency ? transaction.currency.code : transaction.exchange.symbol;
+                //   const tsym = 'BTC,USD,RUB';
+                //   const ts = new Date(transaction.date).getTime();
+                //   return pricehisto(fsym, tsym, ts)
+                //     .then(histo => {
+                //       transaction.histo = histo[fsym];
+                //       transaction.save();
+                //       return transaction;
+                //     });
+                // } else {
                   return Promise.resolve(transaction);
-                }
+                // }
               }))
               .then(transactions => transactions.map(transaction => {
                 if (transaction.pair && transaction.pair.equals(coin._id)) {
