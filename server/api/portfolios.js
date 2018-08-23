@@ -99,7 +99,7 @@ function getPortfolios(req, res) {
   const owner = req.user._id;
   const portfolio = req.query.portfolioId;
   const symbol = req.query.symbol || BTC;
-  const range = req.query.range || '1d';
+  const range = req.query.range || '1h';
 
   const portfolioQuery = {
     owner,
@@ -120,7 +120,8 @@ function getPortfolios(req, res) {
         ])
         .then(all => {
           portfolio.changePct = all[0];
-          portfolio.amount = all[1];
+          portfolio.amount = all[1].amount;
+          portfolio.amounts = all[1].amounts;
           return portfolio;
         });
       }));
@@ -144,12 +145,18 @@ function getPortfolios(req, res) {
 }
 
 const _getLastTotal = (coins, symbol) => {
+  // console.log('_getLastTotal', symbol, coins);
   let amount = 0;
+  const amounts = {};
   coins.forEach(coin => {
+    Object.keys(coin.market.prices).forEach(key => {
+      if (!amounts[key]) amounts[key] = 0;
+      amounts[key] += coin.symbol === key ? coin.amount : coin.amount * coin.market.prices[key].price;
+    });
     amount += coin.symbol === BTC ? coin.amount : coin.amount * coin.market.prices.BTC.price;
   });
-  if (symbol === BTC) return Promise.resolve(amount);
-  return price(BTC, symbol).then(data => data.data[symbol] * amount);
+  if (symbol === BTC) return Promise.resolve({ amount, amounts });
+  return price(BTC, symbol).then(data => ({ amount: data.data[symbol] * amount, amounts }));
 };
 
 const _getPortfolios = (portfolioQuery) => {
