@@ -89,6 +89,56 @@ function _getDefaultCurrencies() {
     });
 }
 
+function addCurrency(req, res) {
+  if (req.body.currencyId) {
+    return Promise
+      .all([
+        CurrencyModel.findById(req.body.currencyId, '_id code symbol decimalDigits'),
+        UserModel.findById(req.user._id, 'settings'),
+      ])
+      .then(res => {
+        const [ currency, user ] = res;
+        if (currency && user) {
+          user.settings.currencies = [
+            ...user.settings.currencies,
+            { currency },
+          ];
+          user.save();
+          res.send({
+            success: true,
+            // data
+          });
+        }
+      });
+  }
+  res.send({
+    success: false,
+  });
+}
+
+function delCurrency(req, res) {
+  if (req.body.currencyId) {
+    return UserModel.findById(req.user._id, 'settings')
+      .then(user => {
+        const currencies = [];
+        user.settings.currencies.forEach((item) => {
+          if (item.currency.toString() !== req.body.currencyId) currencies.push(item);
+        });
+        user.settings.currencies = currencies;
+        user.save();
+        res.send({
+          success: true,
+          // data
+        });
+      });
+  }
+  res.send({
+    success: false,
+  });
+}
+
 module.exports = {
   getSettings,
+  addCurrency,
+  delCurrency,
 };

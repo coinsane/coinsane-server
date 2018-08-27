@@ -13,7 +13,7 @@ const { search } = require('./api/search');
 const { getMarket, getMarketCap, getMarketExchanges } = require('./api/market');
 const { getPrice, getPriceFull } = require('./api/price');
 const { getCategories, updateCategory, delCategory } = require('./api/categories');
-const { getSettings } = require('./api/settings');
+const { getSettings, addCurrency, delCurrency } = require('./api/settings');
 const { getPages, getPage } = require('./api/pages');
 const { getExchanges } = require('./api/exchanges');
 
@@ -89,6 +89,8 @@ function startServer() {
   server.del('/categories', delCategory);
 
   server.get('/settings', getSettings);
+  server.post('/settings/currency', addCurrency);
+  server.del('/settings/currency', delCurrency);
 
   server.get('/pages/', getPages);
   // server.get('/pages/:name', getPage);

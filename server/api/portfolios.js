@@ -124,7 +124,6 @@ function getPortfolios(req, res) {
                 portfolio.changePct = all[0];
                 portfolio.amount = all[1].amount;
                 portfolio.amounts = all[1].amounts;
-                console.log('portfolio.amounts', portfolio.amounts);
                 return portfolio;
               });
           }));
@@ -168,16 +167,14 @@ const _getUserCurrencies = (user_id) => {
 };
 
 const _getLastTotal = (coins, symbol, currencies) => {
+  let amount = 0;
+  const amounts = {};
+  const currencySymbols = currencies.map(({ market, currency }) => {
+    const currencySymbol = market ? market.symbol : currency.code;
+    amounts[currencySymbol] = 0;
+    return currencySymbol;
+  });
   try {
-    let amount = 0;
-    const amounts = {};
-
-    const currencySymbols = currencies.map(({ market, currency }) => {
-      const currencySymbol = market ? market.symbol : currency.code;
-      amounts[currencySymbol] = 0;
-      return currencySymbol;
-    });
-
     const coinAmountsPromises = [];
 
     coins.forEach(coin => {
@@ -221,7 +218,7 @@ const _getLastTotal = (coins, symbol, currencies) => {
     // if (symbol === BTC) return Promise.resolve({ amount, amounts });
     // return price(BTC, symbol).then(data => ({ amount: data.data[symbol] * amount, amounts }));
   } catch(e) {
-    return Promise.resolve({ amount: 0, amounts: {} });
+    return Promise.resolve({ amount, amounts });
   }
 };
 
