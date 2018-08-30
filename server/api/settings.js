@@ -96,8 +96,8 @@ function addCurrency(req, res) {
         CurrencyModel.findById(req.body.currencyId, '_id code symbol decimalDigits'),
         UserModel.findById(req.user._id, 'settings'),
       ])
-      .then(res => {
-        const [ currency, user ] = res;
+      .then(all => {
+        const [ currency, user ] = all;
         if (currency && user) {
           user.settings.currencies = [
             ...user.settings.currencies,
@@ -122,7 +122,12 @@ function delCurrency(req, res) {
       .then(user => {
         const currencies = [];
         user.settings.currencies.forEach((item) => {
-          if (item.currency.toString() !== req.body.currencyId) currencies.push(item);
+          console.log('item', item);
+          if (
+            item.system ||
+            item.market || // TODO with marketId
+            item.currency && item.currency.toString() !== req.body.currencyId
+          ) currencies.push(item);
         });
         user.settings.currencies = currencies;
         user.save();
