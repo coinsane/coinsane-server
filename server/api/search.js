@@ -57,6 +57,11 @@ function search(req, res, next) {
               data = all[0];
               count = all[1];
             }
+            if (req.query && req.query.type === 'currency') {
+              const response = { result: data, count };
+              cacheSet(cacheKey, response, config.cacheTime.search);
+              return response;
+            }
             return _getAmounts(data, currencies).then(result => {
               // console.log('result', result);
               const response = { result, count };
