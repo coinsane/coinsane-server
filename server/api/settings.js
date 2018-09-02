@@ -5,7 +5,6 @@ const { UserModel, MarketModel, CurrencyModel } = db();
 
 
 function getSettings(req, res) {
-  console.log('user', req.user);
   const cacheKey = getCacheKey('settings', req.user._id);
   return cacheGet(cacheKey)
     .then(cached => {
@@ -25,7 +24,6 @@ function getSettings(req, res) {
           },
         ])
         .then(data => {
-          console.log('user data', data);
           if (!data.settings) return _getDefaultCurrencies();
           return data.settings.currencies;
         })
