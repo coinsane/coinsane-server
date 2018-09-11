@@ -123,6 +123,9 @@ function updatePortfolioTotals(data) {
                 value: getMinMaxAvgHours(minsBlock)
               };
               hours.push(hour);
+              if (hours.length > HOURS_MONTH) {
+                hours.splice(0, 1);
+              }
               totals.hours = hours;
               totals.hoursCount++;
 
@@ -147,11 +150,6 @@ function updatePortfolioTotals(data) {
                   totals.days = days;
                   totals.daysCount++;
                 }
-              }
-
-              // is this a bug?
-              if (hours.length > HOURS_MONTH) {
-                hours.splice(0, 1);
               }
 
             }
@@ -196,6 +194,7 @@ function getMinMaxAvgDays(arr) {
     }
     return { min, max, avg: sum / arr.length }
   } catch(e) {
+    console.log('getMinMaxAvgDays error', arr);
     return { min: 0, max: 0, avg: 0 }
   }
 }
