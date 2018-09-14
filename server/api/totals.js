@@ -6,7 +6,6 @@ function apiTotals(req, res, next) {
 
   getTotals(_id, portfolioId, range, symbol)
     .then(totals => {
-      console.log('totals', _id, portfolioId, range, symbol, totals);
       res.send({
         success: true,
         response: {

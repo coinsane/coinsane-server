@@ -42,7 +42,7 @@ const config = {
     HOURS_WEEK: 168,
     HOURS_MONTH: 720,
     DAYS_MONTH: 30,
-    DAYS_YEAR: 30,
+    DAYS_YEAR: 365,
   },
   search: {
     limit: parseInt(process.env.SEARCH_RESULTS_DEFAULT),
